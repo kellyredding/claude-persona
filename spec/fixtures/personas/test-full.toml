@@ -1,0 +1,21 @@
+description = "Full featured test persona"
+model = "opus"
+
+[directories]
+allowed = [
+    "~/projects/test",
+    "~/documents",
+]
+
+[mcp]
+configs = ["test-mcp"]
+
+[tools]
+allowed = ["Read", "Write", "Edit"]
+disallowed = ["Bash(rm:*)"]
+
+[permissions]
+mode = "acceptEdits"
+
+[prompt]
+system = "You are a test assistant for specs."

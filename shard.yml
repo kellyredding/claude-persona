@@ -1,0 +1,21 @@
+name: claude-persona
+version: 0.1.0
+description: Launch Claude Code with pre-configured personas
+
+authors:
+  - Kelly Redding <kelly@kellyredding.com>
+
+repository: https://github.com/kellyredding/claude-persona
+
+targets:
+  claude-persona:
+    main: src/claude_persona.cr
+
+license: MIT
+
+dependencies:
+  toml:
+    github: crystal-community/toml.cr
+    version: ~> 0.8
+
+crystal: ">= 1.0.0"

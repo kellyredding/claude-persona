@@ -1,0 +1,5 @@
+description = "Basic test persona"
+model = "sonnet"
+
+[permissions]
+mode = "default"

@@ -1,0 +1,80 @@
+#!/bin/bash
+set -e
+
+# Builds on current platform and adds to existing release
+# Usage: bin/release-add
+
+VERSION_FILE="VERSION.txt"
+BINARY="claude-persona"
+BUILD_DIR="build"
+RELEASE_DIR="releases"
+
+# Verify we're on main branch
+CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+if [ "$CURRENT_BRANCH" != "main" ]; then
+  echo "Error: Release builds must be created from the 'main' branch."
+  echo "Currently on: $CURRENT_BRANCH"
+  echo ""
+  echo "Switch to main first:"
+  echo "  git checkout main"
+  echo "  git pull origin main"
+  exit 1
+fi
+
+VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+TAG="v$VERSION"
+
+# Detect platform
+OS=$(uname -s | tr '[:upper:]' '[:lower:]')
+ARCH=$(uname -m)
+
+# Normalize architecture names
+case "$ARCH" in
+  x86_64)  ARCH="amd64" ;;
+  aarch64) ARCH="arm64" ;;
+  arm64)   ARCH="arm64" ;;
+esac
+
+# Normalize OS names
+case "$OS" in
+  darwin) OS="darwin" ;;
+  linux)  OS="linux" ;;
+esac
+
+ARTIFACT="$BINARY-$VERSION-$OS-$ARCH"
+
+echo "==> Building for $OS-$ARCH"
+echo "==> Adding to release $TAG"
+
+# Verify release exists
+if ! gh release view "$TAG" >/dev/null 2>&1; then
+  echo "Error: Release $TAG doesn't exist. Run bin/release first."
+  exit 1
+fi
+
+# Build release binary
+echo "==> Building release binary"
+mkdir -p "$BUILD_DIR"
+shards install
+crystal build --release --no-debug -o "$BUILD_DIR/$BINARY" src/claude_persona.cr
+
+# Create releases directory
+mkdir -p "$RELEASE_DIR"
+
+# Copy and compress
+echo "==> Creating release artifact"
+cp "$BUILD_DIR/$BINARY" "$RELEASE_DIR/$ARTIFACT"
+cd "$RELEASE_DIR"
+tar -czf "$ARTIFACT.tar.gz" "$ARTIFACT"
+shasum -a 256 "$ARTIFACT.tar.gz" > "$ARTIFACT.tar.gz.sha256"
+rm "$ARTIFACT"
+cd ..
+
+# Upload to existing release
+echo "==> Uploading to $TAG"
+gh release upload "$TAG" \
+  "$RELEASE_DIR/$ARTIFACT.tar.gz" \
+  "$RELEASE_DIR/$ARTIFACT.tar.gz.sha256"
+
+echo ""
+echo "==> Added $ARTIFACT to $TAG"
