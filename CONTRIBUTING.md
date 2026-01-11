@@ -38,6 +38,50 @@ make clean      # Remove build artifacts
 5. Build with `make dev` to test locally
 6. Test manually with `./build/claude-persona`
 
+## Using Your Local Build
+
+When developing and testing changes, you'll want your `claude-persona` command to use your locally built binary instead of an installed release. This lets you QA changes in real usage scenarios.
+
+### Build and Symlink
+
+1. Build the development binary:
+   ```bash
+   make dev
+   ```
+   This creates `build/claude-persona`.
+
+2. Symlink it to a directory in your PATH:
+   ```bash
+   # Example: symlink to ~/bin (adjust path as needed)
+   ln -sf "$(pwd)/build/claude-persona" ~/bin/claude-persona
+   ```
+
+3. Verify it's using your local build:
+   ```bash
+   ls -la $(which claude-persona)  # Should show symlink pointing to your build
+   claude-persona version          # Should show current version
+   ```
+
+### Development Cycle
+
+With the symlink in place, your workflow becomes:
+
+1. Make changes to source code
+2. Run `make dev` to rebuild
+3. Test immediately with `claude-persona` (uses your new build)
+4. Run `make check` before committing
+
+The symlink points to `build/claude-persona`, so each `make dev` automatically updates what `claude-persona` runs - no need to re-symlink.
+
+### Cleanup
+
+When you're done developing and want to use a released version:
+
+```bash
+rm ~/bin/claude-persona  # Remove symlink
+# Then install a release per README instructions
+```
+
 ## Testing
 
 The test suite includes:
