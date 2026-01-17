@@ -44,6 +44,21 @@ describe "dryrun integration" do
       output.should contain("abc-123")
     end
 
+    it "includes initial_message for new session" do
+      output = run_dryrun("test-with-initial-message")
+
+      output.should contain("-- \"Start your task now.\"")
+    end
+
+    it "omits initial_message when resuming" do
+      output = run_dryrun("test-with-initial-message", ["--resume", "session-123"])
+
+      output.should contain("--resume")
+      output.should contain("session-123")
+      output.should_not contain("Start your task now.")
+      output.should_not contain("-- \"")
+    end
+
     it "expands ~ in directory paths" do
       output = run_dryrun("test-full")
 

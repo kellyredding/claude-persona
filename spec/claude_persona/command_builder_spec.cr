@@ -141,6 +141,28 @@ describe ClaudePersona::CommandBuilder do
       # Last arg should be a flag value, not an initial message
       args.last.should_not eq("")
     end
+
+    it "omits config initial_message when resuming a session" do
+      config = config_with_initial_message("Begin your task.")
+      builder = ClaudePersona::CommandBuilder.new(config, resume_session_id: "abc-123")
+
+      args = builder.build
+      args.should_not contain("--")
+      args.should_not contain("Begin your task.")
+    end
+
+    it "includes explicit initial_message even when resuming" do
+      config = config_with_initial_message("From config")
+      builder = ClaudePersona::CommandBuilder.new(
+        config,
+        resume_session_id: "abc-123",
+        initial_message: "Explicit override",
+      )
+
+      args = builder.build
+      args.should contain("--")
+      args.last.should eq("Explicit override")
+    end
   end
 
   describe "#format_command" do

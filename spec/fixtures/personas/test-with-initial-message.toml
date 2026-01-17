@@ -1,0 +1,9 @@
+description = "Test persona with initial message"
+model = "sonnet"
+
+[permissions]
+mode = "default"
+
+[prompt]
+system = "You are a test assistant."
+initial_message = "Start your task now."

@@ -16,7 +16,8 @@ module ClaudePersona
       @args = [] of String
 
       # Use provided initial_message, or fall back to config's initial_message
-      @initial_message = initial_message || @config.prompt.try(&.initial_message).try { |m| m.empty? ? nil : m }
+      # Skip config's initial_message when resuming (session already started)
+      @initial_message = initial_message || (resume_session_id ? nil : @config.prompt.try(&.initial_message).try { |m| m.empty? ? nil : m })
     end
 
     def build : Array(String)
