@@ -164,14 +164,14 @@ module ClaudePersona
     private def calculate_cost_from_jsonl(path : Path) : Float64
       total_cost = 0.0
 
-      # Model pricing per million tokens (as of Jan 2025)
-      # TODO: Periodically check https://www.anthropic.com/pricing for updates
+      # Model pricing per million tokens (as of Jan 2026)
+      # TODO: Periodically check https://claude.com/pricing for updates
       pricing = {
         "opus" => {
-          "input"       => 15.0,
-          "output"      => 75.0,
-          "cache_write" => 18.75,
-          "cache_read"  => 1.50,
+          "input"       => 5.0,
+          "output"      => 25.0,
+          "cache_write" => 6.25,
+          "cache_read"  => 0.50,
         },
         "sonnet" => {
           "input"       => 3.0,
@@ -180,10 +180,10 @@ module ClaudePersona
           "cache_read"  => 0.30,
         },
         "haiku" => {
-          "input"       => 0.25,
-          "output"      => 1.25,
-          "cache_write" => 0.30,
-          "cache_read"  => 0.03,
+          "input"       => 1.0,
+          "output"      => 5.0,
+          "cache_write" => 1.25,
+          "cache_read"  => 0.10,
         },
       }
 
