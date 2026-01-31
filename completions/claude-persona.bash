@@ -23,7 +23,7 @@ _claude_persona() {
 
     # Get persona names dynamically
     _claude_persona_personas() {
-        claude-persona list 2>/dev/null | grep -E '^  [a-zA-Z0-9_-]+$' | sed 's/^  //'
+        claude-persona list 2>/dev/null | grep -E '^  [a-zA-Z0-9_-]+ \(' | sed 's/^  //' | cut -d' ' -f1
     }
 
     # Get imported MCP config names dynamically
