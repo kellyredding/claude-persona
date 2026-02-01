@@ -39,14 +39,15 @@ module ClaudePersona
         migrated = content.gsub("\"\"\"", "'''")
 
         # Update version line if present, or add it after model line
+        # Stamp with "1.1.0" (not VERSION) so post-parse migrations can run for later versions
         if migrated =~ /^version\s*=\s*["'][^"']*["']/m
-          migrated = migrated.gsub(/^version\s*=\s*["'][^"']*["']/m, "version = \"#{VERSION}\"")
+          migrated = migrated.gsub(/^version\s*=\s*["'][^"']*["']/m, "version = \"1.1.0\"")
         elsif migrated =~ /^model\s*=\s*["'][^"']*["']/m
           # Insert version after model line
-          migrated = migrated.gsub(/^(model\s*=\s*["'][^"']*["'])/m, "\\1\nversion = \"#{VERSION}\"")
+          migrated = migrated.gsub(/^(model\s*=\s*["'][^"']*["'])/m, "\\1\nversion = \"1.1.0\"")
         else
           # Fallback: add at beginning (shouldn't happen with valid configs)
-          migrated = "version = \"#{VERSION}\"\n" + migrated
+          migrated = "version = \"1.1.0\"\n" + migrated
         end
 
         File.write(path, migrated)

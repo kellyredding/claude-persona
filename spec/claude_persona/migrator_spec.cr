@@ -113,7 +113,8 @@ describe ClaudePersona::Migrator do
         migrated = File.read(path)
         migrated.should contain("'''")
         migrated.should_not contain("\"\"\"")
-        migrated.should contain("version = \"#{ClaudePersona::VERSION}\"")
+        # Should stamp with 1.1.0 (not VERSION) so post-parse migrations can run
+        migrated.should contain("version = \"1.1.0\"")
 
         # Verify content can now be parsed without corruption
         config = ClaudePersona::PersonaConfig.from_toml(migrated)
