@@ -59,6 +59,12 @@ sed "s/^version: .*/version: $VERSION/" shard.yml > shard.yml.tmp && mv shard.ym
 echo "==> Syncing version to source"
 sed "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" src/claude_persona.cr > src/claude_persona.cr.tmp && mv src/claude_persona.cr.tmp src/claude_persona.cr
 
+# Sync version to test fixtures
+echo "==> Syncing version to test fixtures"
+for f in spec/fixtures/personas/*.toml; do
+  sed "s/^version = \".*\"/version = \"$VERSION\"/" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+done
+
 # Build release binary
 echo "==> Building release binary"
 mkdir -p "$BUILD_DIR"
@@ -84,7 +90,7 @@ cd ..
 # Commit if there are changes
 if [ -n "$(git status --porcelain)" ]; then
   echo "==> Committing version $VERSION"
-  git add VERSION.txt shard.yml src/claude_persona.cr
+  git add VERSION.txt shard.yml src/claude_persona.cr spec/fixtures/personas/*.toml
   git commit -m "Release $VERSION"
 fi
 
