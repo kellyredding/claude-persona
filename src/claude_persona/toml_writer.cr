@@ -64,18 +64,20 @@ module ClaudePersona
           lines << "[prompt]"
           unless prompt.system.empty?
             if prompt.system.includes?("\n")
-              lines << "system = \"\"\""
+              # Use literal strings (''') to avoid toml.cr bug with embedded quotes in basic strings
+              lines << "system = '''"
               lines << prompt.system
-              lines << "\"\"\""
+              lines << "'''"
             else
               lines << "system = #{quote(prompt.system)}"
             end
           end
           unless prompt.initial_message.empty?
             if prompt.initial_message.includes?("\n")
-              lines << "initial_message = \"\"\""
+              # Use literal strings (''') to avoid toml.cr bug with embedded quotes in basic strings
+              lines << "initial_message = '''"
               lines << prompt.initial_message
-              lines << "\"\"\""
+              lines << "'''"
             else
               lines << "initial_message = #{quote(prompt.initial_message)}"
             end

@@ -38,10 +38,10 @@ module ClaudePersona
     mode = "default"
 
     [prompt]
-    # The system prompt that defines this persona's behavior
-    system = """
+    # The system prompt that defines this persona's behavior (uses literal strings)
+    system = '''
     Your system prompt here...
-    """
+    '''
 
     # Optional: initial message to send when launching (Claude responds immediately)
     initial_message = "Begin your task..."
@@ -92,6 +92,12 @@ module ClaudePersona
     - Consider what context files it should read on startup
     - MCP servers add capabilities but consume context - only include what's needed
     - Initial messages are rarely needed - only use for personas that should start working immediately
+
+    ## TOML Formatting Constraints
+
+    **CRITICAL**: Never use three consecutive single quotes (''') anywhere in system prompts or initial messages.
+    This sequence is used as the TOML literal string delimiter and will break parsing if it appears in content.
+    If you need to show code examples with triple quotes, use backticks or other alternatives instead.
 
     ## Available MCP Configs
 

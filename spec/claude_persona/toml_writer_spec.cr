@@ -86,21 +86,22 @@ describe ClaudePersona::TomlWriter do
       perms_pos.should be < prompt_pos
     end
 
-    it "handles multiline system prompts" do
+    it "handles multiline system prompts with literal strings" do
       toml_in = <<-TOML
       model = "sonnet"
 
       [prompt]
-      system = """
+      system = '''
       Line one.
       Line two.
-      """
+      '''
       TOML
 
       config = ClaudePersona::PersonaConfig.from_toml(toml_in)
       result = ClaudePersona::TomlWriter.to_toml(config)
 
-      result.should contain("system = \"\"\"")
+      # Should use literal strings (''') to avoid toml.cr bug with embedded quotes
+      result.should contain("system = '''")
       result.should contain("Line one.")
       result.should contain("Line two.")
     end
@@ -145,21 +146,22 @@ describe ClaudePersona::TomlWriter do
       result.should contain("description = \"Test with \\\"quotes\\\"\"")
     end
 
-    it "handles multiline initial_message" do
+    it "handles multiline initial_message with literal strings" do
       toml_in = <<-TOML
       model = "sonnet"
 
       [prompt]
-      initial_message = """
+      initial_message = '''
       Line one.
       Line two.
-      """
+      '''
       TOML
 
       config = ClaudePersona::PersonaConfig.from_toml(toml_in)
       result = ClaudePersona::TomlWriter.to_toml(config)
 
-      result.should contain("initial_message = \"\"\"")
+      # Should use literal strings (''') to avoid toml.cr bug with embedded quotes
+      result.should contain("initial_message = '''")
       result.should contain("Line one.")
       result.should contain("Line two.")
 
@@ -167,6 +169,36 @@ describe ClaudePersona::TomlWriter do
       config2 = ClaudePersona::PersonaConfig.from_toml(result)
       config2.prompt.not_nil!.initial_message.should contain("Line one.")
       config2.prompt.not_nil!.initial_message.should contain("Line two.")
+    end
+
+    # Regression test for toml.cr bug with embedded quotes in multi-line basic strings
+    # See: https://github.com/crystal-community/toml.cr - embedded quotes inside """
+    # cause character corruption during round-trip parsing
+    it "preserves embedded quotes in multiline prompts (regression)" do
+      # This content has embedded quotes that trigger the toml.cr bug when using """
+      toml_in = <<-TOML
+      model = "sonnet"
+
+      [prompt]
+      system = '''
+      Run this command:
+      - mcp__server__call(assignee: "me", team: "FLEX", state: "In Progress")
+      - Use date format: date +"%Y-%m-%d"
+      '''
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml_in)
+      result = ClaudePersona::TomlWriter.to_toml(config)
+
+      # Round-trip should preserve all content exactly
+      config2 = ClaudePersona::PersonaConfig.from_toml(result)
+      system = config2.prompt.not_nil!.system
+
+      # These would fail if using """ due to toml.cr bug
+      system.should contain(%(assignee: "me"))
+      system.should contain(%(team: "FLEX"))
+      system.should contain(%(state: "In Progress"))
+      system.should contain(%(date +"%Y-%m-%d"))
     end
   end
 end
