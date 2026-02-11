@@ -71,6 +71,7 @@ make install
 ```bash
 claude-persona <name>              # Launch Claude with this persona
 claude-persona <name> --vibe       # Launch with permissions skipped
+claude-persona <name> -p "prompt"  # One-shot: print response and exit
 claude-persona <name> --dry-run    # Show command without executing
 claude-persona list                # List all available personas
 claude-persona show <name>         # Display persona configuration
@@ -309,6 +310,51 @@ When launched, Claude will immediately respond to the initial message. This is u
 - **Research personas** that begin analyzing immediately
 
 The launch display shows `💬 Auto-start enabled` when this is configured.
+
+## Print Mode (One-Shot)
+
+Run a persona non-interactively — send a single prompt, get the response, and exit:
+
+```bash
+claude-persona rails-dev -p "What files handle user authentication?"
+```
+
+This applies the full persona configuration (system prompt, model, tools, MCPs, directories) but runs Claude in non-interactive mode. The response is printed to stdout and the process exits.
+
+### JSON Output
+
+Get structured JSON output for programmatic use:
+
+```bash
+claude-persona rails-dev -p "List the API endpoints" --output-format json
+```
+
+The JSON response includes the result, token usage, and cost:
+
+```json
+{
+  "type": "result",
+  "subtype": "success",
+  "result": "Here are the API endpoints...",
+  "total_cost_usd": 0.0234,
+  "session_id": "..."
+}
+```
+
+### Use Cases
+
+- **Scripting**: Automate tasks using persona expertise
+- **Agent delegation**: Have one Claude session delegate work to a persona
+- **CI/CD**: Run code analysis or reviews in pipelines
+- **Composability**: Chain persona calls in shell scripts
+
+Print mode automatically adds `--no-session-persistence` since one-shot calls don't need session history.
+
+Works with other flags:
+```bash
+claude-persona rails-dev -p "Review this code" --output-format json --vibe
+claude-persona rails-dev -p "Analyze performance" --dry-run
+```
 
 ## Dryrun Mode
 

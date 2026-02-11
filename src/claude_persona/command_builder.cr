@@ -9,10 +9,14 @@ module ClaudePersona
       session_id : String? = nil,
       vibe : Bool = false,
       initial_message : String? = nil,
+      print_prompt : String? = nil,
+      output_format : String? = nil,
     )
       @resume_session_id = resume_session_id
       @session_id = session_id
       @vibe = vibe
+      @print_prompt = print_prompt
+      @output_format = output_format
       @args = [] of String
 
       # Use provided initial_message, or fall back to config's initial_message
@@ -29,6 +33,8 @@ module ClaudePersona
       add_mcp_configs
       add_permission_mode
       add_vibe_mode
+      add_print_mode
+      add_output_format
       add_initial_message
 
       @args
@@ -102,7 +108,22 @@ module ClaudePersona
       end
     end
 
+    private def add_print_mode
+      if prompt = @print_prompt
+        @args << "-p" << prompt
+        # Disable session persistence for one-shot calls
+        @args << "--no-session-persistence"
+      end
+    end
+
+    private def add_output_format
+      if fmt = @output_format
+        @args << "--output-format" << fmt
+      end
+    end
+
     private def add_initial_message
+      return if @print_prompt # Print mode uses -p instead
       if msg = @initial_message
         @args << "--" << msg
       end
@@ -124,11 +145,27 @@ module ClaudePersona
           break
         end
 
+        # Handle -p flag (short flag with value)
+        if arg == "-p"
+          i += 1
+          if i < @args.size
+            value = @args[i]
+            display_value = if value.size > 60
+                              "\"#{value[0, 57]}...\""
+                            else
+                              value.includes?(" ") ? "\"#{value}\"" : "\"#{value}\""
+                            end
+            lines << "  -p #{display_value} \\"
+            i += 1
+          end
+          next
+        end
+
         if arg.starts_with?("--")
           # Collect all values until next flag or end of flags
           values = [] of String
           j = i + 1
-          while j < @args.size && !@args[j].starts_with?("--")
+          while j < @args.size && !@args[j].starts_with?("--") && !@args[j].starts_with?("-p")
             values << @args[j]
             j += 1
           end
@@ -159,8 +196,8 @@ module ClaudePersona
         end
       end
 
-      # Add initial_message with -- separator if present
-      if msg = @initial_message
+      # Add initial_message with -- separator if present (skip in print mode)
+      if !@print_prompt && (msg = @initial_message)
         display_msg = if msg.size > 60
                         "\"#{msg[0, 57]}...\""
                       else

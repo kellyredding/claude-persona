@@ -65,6 +65,30 @@ describe "dryrun integration" do
       output.should_not contain("~/")
       output.should match(/--add-dir \//)
     end
+
+    it "outputs -p flag with print prompt" do
+      output = run_dryrun("test-basic", ["-p", "Hello world"])
+
+      output.should contain("-p")
+      output.should contain("Hello world")
+      output.should contain("--no-session-persistence")
+    end
+
+    it "outputs --output-format with -p" do
+      output = run_dryrun("test-basic", ["-p", "Hello", "--output-format=json"])
+
+      output.should contain("-p")
+      output.should contain("--output-format")
+      output.should contain("json")
+    end
+
+    it "omits initial_message when using -p" do
+      output = run_dryrun("test-with-initial-message", ["-p", "One-shot prompt"])
+
+      output.should contain("-p")
+      output.should contain("One-shot prompt")
+      output.should_not contain("Start your task now.")
+    end
   end
 
   describe "generate command" do
