@@ -273,7 +273,6 @@ After each session, claude-persona displays:
 Persona:  rails-dev
 Model:    sonnet
 Runtime:  45m 23s
-Cost:     $0.4521
 Session:  a1b2c3d4-e5f6-7890-abcd-ef1234567890
 
 Resume:   claude-persona rails-dev --resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
@@ -329,14 +328,13 @@ Get structured JSON output for programmatic use:
 claude-persona rails-dev -p "List the API endpoints" --output-format json
 ```
 
-The JSON response includes the result, token usage, and cost:
+The JSON response includes the result, token usage, and session info:
 
 ```json
 {
   "type": "result",
   "subtype": "success",
   "result": "Here are the API endpoints...",
-  "total_cost_usd": 0.0234,
   "session_id": "..."
 }
 ```
@@ -461,14 +459,6 @@ If an MCP doesn't appear:
 1. Verify it's configured in Claude with `claude mcp list`
 2. Check you're in the correct directory for project-scoped MCPs
 3. Ensure the config file exists and contains valid JSON
-
-### Session cost shows $0.0000
-
-Cost calculation reads Claude's session JSONL files. Cost will show as zero if:
-- You exited without interacting (no API calls = no tokens used)
-- The session file couldn't be found (e.g., due to symlink resolution on macOS)
-
-The session ID and resume command will still work.
 
 ### Persona not found after generation
 
