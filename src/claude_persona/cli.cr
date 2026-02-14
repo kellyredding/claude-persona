@@ -156,6 +156,17 @@ module ClaudePersona
         # Check for and perform upgrade if needed (post-parse migrations)
         config = maybe_upgrade_persona(name, config, path)
 
+        # Validate flag combinations
+        if print_prompt && resume_id
+          STDERR.puts "Error: -p/--print and --resume cannot be used together"
+          exit(1)
+        end
+
+        if output_format && !print_prompt
+          STDERR.puts "Error: --output-format requires -p/--print"
+          exit(1)
+        end
+
         if dryrun
           builder = CommandBuilder.new(
             config,

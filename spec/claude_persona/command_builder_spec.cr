@@ -164,13 +164,14 @@ describe ClaudePersona::CommandBuilder do
       args.last.should eq("Explicit override")
     end
 
-    it "adds -p flag with prompt for print mode" do
+    it "adds --print flag and prompt as positional arg for print mode" do
       config = minimal_config
       builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Hello world")
 
       args = builder.build
-      args.should contain("-p")
-      args.should contain("Hello world")
+      args.should contain("--print")
+      args.should contain("--")
+      args.last.should eq("Hello world")
     end
 
     it "adds --no-session-persistence in print mode" do
@@ -190,15 +191,15 @@ describe ClaudePersona::CommandBuilder do
       args.should contain("json")
     end
 
-    it "omits initial_message when in print mode" do
+    it "uses print prompt instead of initial_message in print mode" do
       config = config_with_initial_message("Begin task")
       builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "One-shot prompt")
 
       args = builder.build
-      args.should_not contain("--")
+      args.should contain("--print")
+      args.should contain("--")
+      args.last.should eq("One-shot prompt")
       args.should_not contain("Begin task")
-      args.should contain("-p")
-      args.should contain("One-shot prompt")
     end
 
     it "omits --output-format when not specified" do
@@ -266,13 +267,13 @@ describe ClaudePersona::CommandBuilder do
       output.should_not contain("x" * 100)
     end
 
-    it "includes -p flag in formatted command" do
+    it "includes --print flag and prompt in formatted command" do
       config = minimal_config
       builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Test prompt")
 
       output = builder.format_command
-      output.should contain("-p")
-      output.should contain("Test prompt")
+      output.should contain("--print")
+      output.should contain("-- \"Test prompt\"")
     end
   end
 end

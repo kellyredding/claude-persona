@@ -66,27 +66,27 @@ describe "dryrun integration" do
       output.should match(/--add-dir \//)
     end
 
-    it "outputs -p flag with print prompt" do
+    it "outputs --print flag with prompt as positional arg" do
       output = run_dryrun("test-basic", ["-p", "Hello world"])
 
-      output.should contain("-p")
-      output.should contain("Hello world")
+      output.should contain("--print")
+      output.should contain("-- \"Hello world\"")
       output.should contain("--no-session-persistence")
     end
 
-    it "outputs --output-format with -p" do
+    it "outputs --output-format with --print" do
       output = run_dryrun("test-basic", ["-p", "Hello", "--output-format=json"])
 
-      output.should contain("-p")
+      output.should contain("--print")
       output.should contain("--output-format")
       output.should contain("json")
     end
 
-    it "omits initial_message when using -p" do
+    it "uses print prompt instead of initial_message" do
       output = run_dryrun("test-with-initial-message", ["-p", "One-shot prompt"])
 
-      output.should contain("-p")
-      output.should contain("One-shot prompt")
+      output.should contain("--print")
+      output.should contain("-- \"One-shot prompt\"")
       output.should_not contain("Start your task now.")
     end
   end
@@ -119,6 +119,18 @@ describe "dryrun integration" do
       output.should contain("error:")
       # Should still list other valid personas
       output.should contain("test-basic")
+    end
+
+    it "errors when -p and --resume are used together" do
+      output, error = run_persona_with_error("test-basic", ["-p", "Hello", "--resume", "abc-123"])
+
+      error.should contain("-p/--print and --resume cannot be used together")
+    end
+
+    it "errors when --output-format is used without -p" do
+      output, error = run_persona_with_error("test-basic", ["--output-format=json"])
+
+      error.should contain("--output-format requires -p/--print")
     end
   end
 end
@@ -158,4 +170,17 @@ def run_list_command : String
   Process.run("build/claude-persona", ["list"], env: env, output: :pipe, error: :pipe) do |process|
     process.output.gets_to_end
   end
+end
+
+def run_persona_with_error(persona : String, extra_args : Array(String) = [] of String) : Tuple(String, String)
+  args = [persona] + extra_args
+  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
+
+  output = ""
+  error = ""
+  Process.run("build/claude-persona", args, env: env, output: :pipe, error: :pipe) do |process|
+    output = process.output.gets_to_end
+    error = process.error.gets_to_end
+  end
+  {output, error}
 end
