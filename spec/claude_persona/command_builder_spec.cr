@@ -163,6 +163,52 @@ describe ClaudePersona::CommandBuilder do
       args.should contain("--")
       args.last.should eq("Explicit override")
     end
+
+    it "adds --print flag and prompt as positional arg for print mode" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Hello world")
+
+      args = builder.build
+      args.should contain("--print")
+      args.should contain("--")
+      args.last.should eq("Hello world")
+    end
+
+    it "adds --no-session-persistence in print mode" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Hello")
+
+      args = builder.build
+      args.should contain("--no-session-persistence")
+    end
+
+    it "adds --output-format when specified" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Hello", output_format: "json")
+
+      args = builder.build
+      args.should contain("--output-format")
+      args.should contain("json")
+    end
+
+    it "uses print prompt instead of initial_message in print mode" do
+      config = config_with_initial_message("Begin task")
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "One-shot prompt")
+
+      args = builder.build
+      args.should contain("--print")
+      args.should contain("--")
+      args.last.should eq("One-shot prompt")
+      args.should_not contain("Begin task")
+    end
+
+    it "omits --output-format when not specified" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Hello")
+
+      args = builder.build
+      args.should_not contain("--output-format")
+    end
   end
 
   describe "#format_command" do
@@ -219,6 +265,15 @@ describe ClaudePersona::CommandBuilder do
       output = builder.format_command
       output.should contain("...")
       output.should_not contain("x" * 100)
+    end
+
+    it "includes --print flag and prompt in formatted command" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Test prompt")
+
+      output = builder.format_command
+      output.should contain("--print")
+      output.should contain("-- \"Test prompt\"")
     end
   end
 end

@@ -13,6 +13,8 @@ module ClaudePersona
       vibe = false
       dryrun = false
       resume_id : String? = nil
+      print_prompt : String? = nil
+      output_format : String? = nil
       show_help_flag = false
       show_version_flag = false
 
@@ -26,6 +28,8 @@ module ClaudePersona
         p.on("--vibe", "Skip all permission checks") { vibe = true }
         p.on("--dangerously-skip-permissions", "Alias for --vibe") { vibe = true }
         p.on("--dry-run", "Show command without executing") { dryrun = true }
+        p.on("-p PROMPT", "--print=PROMPT", "Print response and exit (non-interactive)") { |prompt| print_prompt = prompt }
+        p.on("--output-format=FORMAT", "Output format: text, json, stream-json (use with -p)") { |fmt| output_format = fmt }
         p.on("-r ID", "--resume=ID", "Resume a previous session") { |id| resume_id = id }
         p.on("-h", "--help", "Show this help") { show_help_flag = true }
         p.on("-v", "--version", "Show version") { show_version_flag = true }
@@ -84,7 +88,7 @@ module ClaudePersona
         puts VERSION
       else
         # Assume it's a persona name, validate and launch
-        validate_and_launch_persona(command, resume_id, vibe, dryrun)
+        validate_and_launch_persona(command, resume_id, vibe, dryrun, print_prompt, output_format)
       end
     end
 
@@ -95,6 +99,7 @@ module ClaudePersona
       Launch a persona:
         claude-persona <persona>              Launch Claude with persona
         claude-persona <persona> --resume ID  Resume a session
+        claude-persona <persona> -p "prompt"  One-shot: print response and exit
 
       Commands:
         list                    List available personas
@@ -116,7 +121,14 @@ module ClaudePersona
       BANNER
     end
 
-    private def self.validate_and_launch_persona(name : String, resume_id : String?, vibe : Bool, dryrun : Bool)
+    private def self.validate_and_launch_persona(
+      name : String,
+      resume_id : String?,
+      vibe : Bool,
+      dryrun : Bool,
+      print_prompt : String?,
+      output_format : String?,
+    )
       ensure_config_dirs
 
       path = PERSONAS_DIR / "#{name}.toml"
@@ -144,10 +156,53 @@ module ClaudePersona
         # Check for and perform upgrade if needed (post-parse migrations)
         config = maybe_upgrade_persona(name, config, path)
 
+        # Validate flag combinations
+        if print_prompt && resume_id
+          STDERR.puts "Error: -p/--print and --resume cannot be used together"
+          exit(1)
+        end
+
+        if output_format && !print_prompt
+          STDERR.puts "Error: --output-format requires -p/--print"
+          exit(1)
+        end
+
         if dryrun
-          builder = CommandBuilder.new(config, resume_session_id: resume_id, vibe: vibe)
+          builder = CommandBuilder.new(
+            config,
+            resume_session_id: resume_id,
+            vibe: vibe,
+            print_prompt: print_prompt,
+            output_format: output_format,
+          )
           puts builder.format_command
           return
+        end
+
+        if print_prompt
+          # Validate output_format if provided
+          if fmt = output_format
+            unless ["text", "json", "stream-json"].includes?(fmt)
+              STDERR.puts "Error: Invalid output format '#{fmt}'. Must be: text, json, stream-json"
+              exit(1)
+            end
+          end
+
+          builder = CommandBuilder.new(
+            config,
+            vibe: vibe,
+            print_prompt: print_prompt,
+            output_format: output_format,
+          )
+          args = builder.build
+
+          status = Process.run("claude",
+            args: args,
+            input: Process::Redirect::Inherit,
+            output: Process::Redirect::Inherit,
+            error: Process::Redirect::Inherit,
+          )
+          exit(status.exit_code)
         end
 
         session = Session.new(name, config, resume_id, vibe)
