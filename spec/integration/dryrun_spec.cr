@@ -44,6 +44,12 @@ describe "dryrun integration" do
       output.should contain("abc-123")
     end
 
+    it "includes --session-id for new sessions" do
+      output = run_dryrun("test-basic")
+
+      output.should contain("--session-id")
+    end
+
     it "includes initial_message for new session" do
       output = run_dryrun("test-with-initial-message")
 
@@ -88,6 +94,19 @@ describe "dryrun integration" do
       output.should contain("--print")
       output.should contain("-- \"One-shot prompt\"")
       output.should_not contain("Start your task now.")
+    end
+
+    it "includes --settings placeholder for session tracking" do
+      output = run_dryrun("test-basic")
+
+      output.should contain("--settings")
+      output.should contain("/tmp/claude-persona-settings-XXXXXX.json")
+    end
+
+    it "omits --settings in print mode" do
+      output = run_dryrun("test-basic", ["-p", "Hello"])
+
+      output.should_not contain("--settings")
     end
   end
 

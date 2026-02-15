@@ -99,6 +99,23 @@ describe ClaudePersona::CommandBuilder do
       args.should contain("abc-123")
     end
 
+    it "adds --session-id when provided" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, session_id: "new-uuid-123")
+
+      args = builder.build
+      args.should contain("--session-id")
+      args.should contain("new-uuid-123")
+    end
+
+    it "omits --session-id when nil" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config)
+
+      args = builder.build
+      args.should_not contain("--session-id")
+    end
+
     it "adds --strict-mcp-config when MCPs are configured" do
       # This test requires MCP fixture files to exist
       config = config_with_mcp(["test-mcp"])
@@ -209,6 +226,26 @@ describe ClaudePersona::CommandBuilder do
       args = builder.build
       args.should_not contain("--output-format")
     end
+
+    it "adds --settings when path provided" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(
+        config,
+        settings_path: "/tmp/test-settings.json",
+      )
+
+      args = builder.build
+      args.should contain("--settings")
+      args.should contain("/tmp/test-settings.json")
+    end
+
+    it "omits --settings when nil" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config)
+
+      args = builder.build
+      args.should_not contain("--settings")
+    end
   end
 
   describe "#format_command" do
@@ -267,6 +304,15 @@ describe ClaudePersona::CommandBuilder do
       output.should_not contain("x" * 100)
     end
 
+    it "includes --session-id in formatted output" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config, session_id: "new-uuid-456")
+
+      output = builder.format_command
+      output.should contain("--session-id")
+      output.should contain("new-uuid-456")
+    end
+
     it "includes --print flag and prompt in formatted command" do
       config = minimal_config
       builder = ClaudePersona::CommandBuilder.new(config, print_prompt: "Test prompt")
@@ -274,6 +320,18 @@ describe ClaudePersona::CommandBuilder do
       output = builder.format_command
       output.should contain("--print")
       output.should contain("-- \"Test prompt\"")
+    end
+
+    it "includes --settings in formatted output" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(
+        config,
+        settings_path: "/tmp/test-settings.json",
+      )
+
+      output = builder.format_command
+      output.should contain("--settings")
+      output.should contain("/tmp/test-settings.json")
     end
   end
 end

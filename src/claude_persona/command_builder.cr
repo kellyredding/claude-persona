@@ -11,12 +11,14 @@ module ClaudePersona
       initial_message : String? = nil,
       print_prompt : String? = nil,
       output_format : String? = nil,
+      settings_path : String? = nil,
     )
       @resume_session_id = resume_session_id
       @session_id = session_id
       @vibe = vibe
       @print_prompt = print_prompt
       @output_format = output_format
+      @settings_path = settings_path
       @args = [] of String
 
       # Use provided initial_message, or fall back to config's initial_message
@@ -35,6 +37,7 @@ module ClaudePersona
       add_vibe_mode
       add_print_mode
       add_output_format
+      add_settings
       add_initial_message
 
       @args
@@ -119,6 +122,12 @@ module ClaudePersona
     private def add_output_format
       if fmt = @output_format
         @args << "--output-format" << fmt
+      end
+    end
+
+    private def add_settings
+      if path = @settings_path
+        @args << "--settings" << path
       end
     end
 

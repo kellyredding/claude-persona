@@ -9,6 +9,8 @@ module ClaudePersona
     getter resume_session_id : String?
     getter session_id : String
     getter vibe : Bool
+    getter settings_path : String?
+    getter session_id_path : String?
 
     def initialize(@persona_name : String, @config : PersonaConfig, @resume_session_id : String? = nil, @vibe : Bool = false)
       @start_time = Time.local
@@ -17,7 +19,17 @@ module ClaudePersona
     end
 
     def run : Int32
-      args = CommandBuilder.new(@config, @resume_session_id, @session_id, @vibe).build
+      # Create session tracking hook
+      @settings_path, @session_id_path =
+        SessionHookSettings.create(@session_id)
+
+      args = CommandBuilder.new(
+        @config,
+        @resume_session_id,
+        @session_id,
+        @vibe,
+        settings_path: @settings_path,
+      ).build
 
       display_launch_info
 
@@ -31,8 +43,18 @@ module ClaudePersona
 
       @end_time = Time.local
 
+      # Read latest session ID (may have changed via /clear or compaction)
+      if path = @session_id_path
+        if tracked_id = SessionHookSettings.read_session_id(path)
+          @session_id = tracked_id
+        end
+      end
+
       # Display session summary
       display_summary
+
+      # Clean up temp files
+      SessionHookSettings.cleanup(@settings_path, @session_id_path)
 
       status.exit_code
     end
@@ -61,7 +83,7 @@ module ClaudePersona
       if session_id = @resume_session_id
         puts "\u{1F504} Resuming persona: #{@persona_name} (session #{session_id[0, 8]}...)"
       else
-        puts "\u{1F680} Launching persona: #{@persona_name}"
+        puts "\u{1F680} Launching persona: #{@persona_name} (session #{@session_id[0, 8]}...)"
       end
 
       puts "   Model: #{@config.model}"
