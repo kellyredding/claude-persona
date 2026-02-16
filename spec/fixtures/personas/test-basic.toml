@@ -1,6 +1,6 @@
-version = "1.2.1"
 description = "Basic test persona"
 model = "sonnet"
+version = "1.2.2"
 
 [permissions]
 mode = "default"

@@ -1,6 +1,6 @@
-version = "1.2.1"
 description = "Full featured test persona"
 model = "opus"
+version = "1.2.2"
 
 [directories]
 allowed = [
