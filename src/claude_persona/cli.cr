@@ -15,6 +15,7 @@ module ClaudePersona
       vibe = false
       dryrun = false
       resume_id : String? = nil
+      cli_session_id : String? = nil
       print_prompt : String? = nil
       output_format : String? = nil
       show_help_flag = false
@@ -33,6 +34,7 @@ module ClaudePersona
         p.on("-p PROMPT", "--print=PROMPT", "Print response and exit (non-interactive)") { |prompt| print_prompt = prompt }
         p.on("--output-format=FORMAT", "Output format: text, json, stream-json (use with -p)") { |fmt| output_format = fmt }
         p.on("-r ID", "--resume=ID", "Resume a previous session") { |id| resume_id = id }
+        p.on("--session-id=ID", "Use a specific session ID (for external launchers)") { |id| cli_session_id = id }
         p.on("-h", "--help", "Show this help") { show_help_flag = true }
         p.on("-v", "--version", "Show version") { show_version_flag = true }
 
@@ -92,7 +94,7 @@ module ClaudePersona
         puts VERSION
       else
         # Assume it's a persona name, validate and launch
-        validate_and_launch_persona(command, resume_id, vibe, dryrun, print_prompt, output_format)
+        validate_and_launch_persona(command, resume_id, cli_session_id, vibe, dryrun, print_prompt, output_format)
       end
     end
 
@@ -101,9 +103,10 @@ module ClaudePersona
       Usage: claude-persona [persona|command] [options]
 
       Launch a persona:
-        claude-persona <persona>              Launch Claude with persona
-        claude-persona <persona> --resume ID  Resume a session
-        claude-persona <persona> -p "prompt"  One-shot: print response and exit
+        claude-persona <persona>                      Launch Claude with persona
+        claude-persona <persona> --resume ID          Resume a session
+        claude-persona <persona> --session-id ID      Use a specific session ID
+        claude-persona <persona> -p "prompt"          One-shot: print response and exit
 
       Commands:
         list                    List available personas
@@ -129,6 +132,7 @@ module ClaudePersona
     private def self.validate_and_launch_persona(
       name : String,
       resume_id : String?,
+      cli_session_id : String?,
       vibe : Bool,
       dryrun : Bool,
       print_prompt : String?,
@@ -162,6 +166,11 @@ module ClaudePersona
         config = maybe_upgrade_persona(name, config, path)
 
         # Validate flag combinations
+        if cli_session_id && resume_id
+          STDERR.puts "Error: --session-id and --resume cannot be used together"
+          exit(1)
+        end
+
         if print_prompt && resume_id
           STDERR.puts "Error: -p/--print and --resume cannot be used together"
           exit(1)
@@ -173,7 +182,7 @@ module ClaudePersona
         end
 
         if dryrun
-          session_id = resume_id || UUID.random.to_s
+          session_id = resume_id || cli_session_id || UUID.random.to_s
           # Session tracking only applies to interactive sessions, not print mode
           settings_placeholder = print_prompt ? nil : "/tmp/claude-persona-settings-XXXXXX.json"
           builder = CommandBuilder.new(
@@ -215,7 +224,7 @@ module ClaudePersona
           exit(status.exit_code)
         end
 
-        session = Session.new(name, config, resume_id, vibe)
+        session = Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id)
         exit_code = session.run
         exit(exit_code)
       rescue e : ConfigError

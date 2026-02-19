@@ -111,6 +111,21 @@ describe "dryrun integration" do
 
       output.should_not contain("--settings")
     end
+
+    it "uses provided --session-id instead of random UUID" do
+      output = run_dryrun("test-basic", ["--session-id", "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee"])
+
+      output.should contain("--session-id")
+      output.should contain("aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee")
+    end
+
+    it "combines --session-id with --vibe" do
+      output = run_dryrun("test-basic", ["--session-id", "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee", "--vibe"])
+
+      output.should contain("--session-id")
+      output.should contain("aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee")
+      output.should contain("--dangerously-skip-permissions")
+    end
   end
 
   describe "generate command" do
@@ -154,6 +169,20 @@ describe "dryrun integration" do
 
       error.should contain("--output-format requires -p/--print")
     end
+
+    it "errors when --session-id and --resume are used together" do
+      output, error = run_persona_with_error("test-basic", ["--session-id", "some-uuid", "--resume", "abc-123"])
+
+      error.should contain("--session-id and --resume cannot be used together")
+    end
+  end
+
+  describe "help output" do
+    it "includes --session-id in help" do
+      output = run_help_command
+
+      output.should contain("--session-id")
+    end
   end
 end
 
@@ -190,6 +219,13 @@ end
 def run_list_command : String
   env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
   Process.run("build/claude-persona", ["list"], env: env, output: :pipe, error: :pipe) do |process|
+    process.output.gets_to_end
+  end
+end
+
+def run_help_command : String
+  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
+  Process.run("build/claude-persona", ["--help"], env: env, output: :pipe, error: :pipe) do |process|
     process.output.gets_to_end
   end
 end

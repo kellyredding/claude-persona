@@ -12,10 +12,10 @@ module ClaudePersona
     getter settings_path : String?
     getter session_id_path : String?
 
-    def initialize(@persona_name : String, @config : PersonaConfig, @resume_session_id : String? = nil, @vibe : Bool = false)
+    def initialize(@persona_name : String, @config : PersonaConfig, @resume_session_id : String? = nil, @vibe : Bool = false, cli_session_id : String? = nil)
       @start_time = Time.local
-      # Use resume session ID if resuming, otherwise generate new UUID
-      @session_id = @resume_session_id || UUID.random.to_s
+      # Priority: resume ID > CLI-injected ID > generate new UUID
+      @session_id = @resume_session_id || cli_session_id || UUID.random.to_s
     end
 
     def run : Int32
