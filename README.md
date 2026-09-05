@@ -46,6 +46,13 @@ cd claude-persona
 make install
 ```
 
+This installs to `~/.local/bin/claude-persona`. Override with `PREFIX` or
+`BINDIR` if you keep binaries elsewhere:
+
+```bash
+make install PREFIX=/usr/local
+```
+
 ## Quick Start
 
 1. **Import your MCP configs from Claude**
@@ -184,6 +191,7 @@ After the interview, Claude proposes a name, shows a preview of the config, and 
 ### Persona Format (TOML)
 
 ```toml
+version = "1.2.3"  # managed by claude-persona — do not edit
 description = "Ruby on Rails developer"
 model = "sonnet"  # opus, sonnet, or haiku
 
@@ -215,6 +223,16 @@ On startup:
 # Optional: initial message triggers Claude to respond immediately on launch
 # initial_message = "Begin your analysis of the codebase..."
 ```
+
+**The `version` field belongs to claude-persona, not to you.** It records which
+release last wrote the file, and it is how the tool decides whether a persona
+needs migrating to the current schema. Leave it out when hand-writing a persona
+— it gets stamped on first launch — and never edit it afterwards. Raising it by
+hand does not mark the persona as newer; it makes an older claude-persona refuse
+to migrate the file and warn instead.
+
+Migration rewrites the whole file through the serializer, in a fixed field
+order. Comments and field ordering in a hand-edited persona do not survive it.
 
 ### MCP Format (JSON)
 
@@ -361,6 +379,11 @@ Preview the exact command without launching Claude:
 ```bash
 claude-persona rails-dev --dry-run
 ```
+
+Note that this previews the command, not the whole run: a persona still gets
+migrated to the current schema before the command is rendered, so a dry run on
+an out-of-date persona rewrites the file. See [Persona Format](#persona-format-toml)
+for what that rewrite touches.
 
 Output:
 ```

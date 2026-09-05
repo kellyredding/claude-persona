@@ -186,8 +186,8 @@ describe "dryrun integration" do
   end
 end
 
-# Names what the whole file is about, across twenty-six examples. Everything
-# else here calls run_binary directly.
+# Names what the whole file is about. Everything else here calls run_binary
+# directly.
 def run_dryrun(persona : String, extra_args : Array(String) = [] of String) : String
   run_binary([persona, "--dry-run"] + extra_args)[:output]
 end
