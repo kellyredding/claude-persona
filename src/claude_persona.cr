@@ -9,4 +9,9 @@ module ClaudePersona
   MCP_DIR      = CONFIG_DIR / "mcp"
 end
 
-ClaudePersona::CLI.run(ARGV)
+# Reach the library without also running the program. Specs require this file
+# for its types; integration examples invoke the built binary as a subprocess
+# instead, where exit codes and stream handling are actually observable.
+unless ENV.has_key?("CLAUDE_PERSONA_SKIP_CLI")
+  ClaudePersona::CLI.run(ARGV)
+end

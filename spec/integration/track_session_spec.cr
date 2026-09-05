@@ -6,16 +6,12 @@ describe "track-session" do
     tempfile.close
     output_path = tempfile.path
 
-    input = %({"session_id":"abc-123-def","source":"startup"})
-    status = Process.run(
-      "build/claude-persona",
+    result = run_binary(
       ["track-session", output_path],
-      input: IO::Memory.new(input),
-      output: Process::Redirect::Close,
-      error: Process::Redirect::Close,
+      stdin: %({"session_id":"abc-123-def","source":"startup"}),
     )
 
-    status.success?.should be_true
+    result[:status].should eq(0)
     File.read(output_path).should eq("abc-123-def")
   ensure
     File.delete(output_path) if output_path && File.exists?(output_path)
@@ -26,24 +22,15 @@ describe "track-session" do
     tempfile.close
     output_path = tempfile.path
 
-    # First write
-    input1 = %({"session_id":"first-id"})
-    Process.run(
-      "build/claude-persona",
+    run_binary(
       ["track-session", output_path],
-      input: IO::Memory.new(input1),
-      output: Process::Redirect::Close,
-      error: Process::Redirect::Close,
+      stdin: %({"session_id":"first-id"}),
     )
 
     # Second write (simulates /clear)
-    input2 = %({"session_id":"second-id"})
-    Process.run(
-      "build/claude-persona",
+    run_binary(
       ["track-session", output_path],
-      input: IO::Memory.new(input2),
-      output: Process::Redirect::Close,
-      error: Process::Redirect::Close,
+      stdin: %({"session_id":"second-id"}),
     )
 
     File.read(output_path).should eq("second-id")
@@ -52,21 +39,12 @@ describe "track-session" do
   end
 
   it "shows usage when called without output file" do
-    error = ""
-    status = Process.run(
-      "build/claude-persona",
-      ["track-session"],
-      input: IO::Memory.new("{}"),
-      output: Process::Redirect::Close,
-      error: :pipe,
-    ) do |process|
-      error = process.error.gets_to_end
-    end
+    result = run_binary(["track-session"], stdin: "{}")
 
-    error.should contain("Usage:")
-    error.should contain("Example:")
-    error.should contain("Settings injected via --settings:")
-    error.should contain("SessionStart")
+    result[:error].should contain("Usage:")
+    result[:error].should contain("Example:")
+    result[:error].should contain("Settings injected via --settings:")
+    result[:error].should contain("SessionStart")
   end
 
   it "exits 0 silently on empty stdin" do
@@ -77,17 +55,10 @@ describe "track-session" do
     # Pre-write a value to verify it's NOT overwritten
     File.write(output_path, "original-id")
 
-    error_io = IO::Memory.new
-    status = Process.run(
-      "build/claude-persona",
-      ["track-session", output_path],
-      input: IO::Memory.new(""),
-      output: Process::Redirect::Close,
-      error: error_io,
-    )
+    result = run_binary(["track-session", output_path], stdin: "")
 
-    status.success?.should be_true
-    error_io.to_s.should be_empty
+    result[:status].should eq(0)
+    result[:error].should be_empty
     File.read(output_path).should eq("original-id")
   ensure
     File.delete(output_path) if output_path && File.exists?(output_path)
@@ -100,17 +71,10 @@ describe "track-session" do
 
     File.write(output_path, "original-id")
 
-    error_io = IO::Memory.new
-    status = Process.run(
-      "build/claude-persona",
-      ["track-session", output_path],
-      input: IO::Memory.new("not json"),
-      output: Process::Redirect::Close,
-      error: error_io,
-    )
+    result = run_binary(["track-session", output_path], stdin: "not json")
 
-    status.success?.should be_true
-    error_io.to_s.should be_empty
+    result[:status].should eq(0)
+    result[:error].should be_empty
     File.read(output_path).should eq("original-id")
   ensure
     File.delete(output_path) if output_path && File.exists?(output_path)
@@ -123,17 +87,13 @@ describe "track-session" do
 
     File.write(output_path, "original-id")
 
-    error_io = IO::Memory.new
-    status = Process.run(
-      "build/claude-persona",
+    result = run_binary(
       ["track-session", output_path],
-      input: IO::Memory.new(%({"source":"startup"})),
-      output: Process::Redirect::Close,
-      error: error_io,
+      stdin: %({"source":"startup"}),
     )
 
-    status.success?.should be_true
-    error_io.to_s.should be_empty
+    result[:status].should eq(0)
+    result[:error].should be_empty
     File.read(output_path).should eq("original-id")
   ensure
     File.delete(output_path) if output_path && File.exists?(output_path)

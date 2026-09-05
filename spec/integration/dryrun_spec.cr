@@ -130,7 +130,7 @@ describe "dryrun integration" do
 
   describe "generate command" do
     it "outputs claude command for generate" do
-      output = run_generate_dryrun
+      output = run_binary(["generate", "--dry-run"])[:output]
 
       output.should contain("claude")
       output.should contain("--model opus")
@@ -144,13 +144,13 @@ describe "dryrun integration" do
 
   describe "error handling" do
     it "shows friendly error for missing MCP config" do
-      output, error = run_dryrun_with_error("test-missing-mcp")
+      result = run_binary(["test-missing-mcp", "--dry-run"])
 
-      error.should contain("MCP config 'nonexistent-mcp' not found")
+      result[:error].should contain("MCP config 'nonexistent-mcp' not found")
     end
 
     it "lists personas gracefully when one has invalid TOML" do
-      output = run_list_command
+      output = run_binary(["list"])[:output]
 
       output.should contain("test-invalid-toml")
       output.should contain("error:")
@@ -159,86 +159,35 @@ describe "dryrun integration" do
     end
 
     it "errors when -p and --resume are used together" do
-      output, error = run_persona_with_error("test-basic", ["-p", "Hello", "--resume", "abc-123"])
+      result = run_binary(["test-basic", "-p", "Hello", "--resume", "abc-123"])
 
-      error.should contain("-p/--print and --resume cannot be used together")
+      result[:error].should contain("-p/--print and --resume cannot be used together")
     end
 
     it "errors when --output-format is used without -p" do
-      output, error = run_persona_with_error("test-basic", ["--output-format=json"])
+      result = run_binary(["test-basic", "--output-format=json"])
 
-      error.should contain("--output-format requires -p/--print")
+      result[:error].should contain("--output-format requires -p/--print")
     end
 
     it "errors when --session-id and --resume are used together" do
-      output, error = run_persona_with_error("test-basic", ["--session-id", "some-uuid", "--resume", "abc-123"])
+      result = run_binary(["test-basic", "--session-id", "some-uuid", "--resume", "abc-123"])
 
-      error.should contain("--session-id and --resume cannot be used together")
+      result[:error].should contain("--session-id and --resume cannot be used together")
     end
   end
 
   describe "help output" do
     it "includes --session-id in help" do
-      output = run_help_command
+      output = run_binary(["--help"])[:output]
 
       output.should contain("--session-id")
     end
   end
 end
 
+# Names what the whole file is about, across twenty-six examples. Everything
+# else here calls run_binary directly.
 def run_dryrun(persona : String, extra_args : Array(String) = [] of String) : String
-  args = [persona, "--dry-run"] + extra_args
-
-  # Run binary with test fixtures directory
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-  Process.run("build/claude-persona", args, env: env, output: :pipe, error: :pipe) do |process|
-    process.output.gets_to_end
-  end
-end
-
-def run_generate_dryrun : String
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-  Process.run("build/claude-persona", ["generate", "--dry-run"], env: env, output: :pipe, error: :pipe) do |process|
-    process.output.gets_to_end
-  end
-end
-
-def run_dryrun_with_error(persona : String) : Tuple(String, String)
-  args = [persona, "--dry-run"]
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-
-  output = ""
-  error = ""
-  Process.run("build/claude-persona", args, env: env, output: :pipe, error: :pipe) do |process|
-    output = process.output.gets_to_end
-    error = process.error.gets_to_end
-  end
-  {output, error}
-end
-
-def run_list_command : String
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-  Process.run("build/claude-persona", ["list"], env: env, output: :pipe, error: :pipe) do |process|
-    process.output.gets_to_end
-  end
-end
-
-def run_help_command : String
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-  Process.run("build/claude-persona", ["--help"], env: env, output: :pipe, error: :pipe) do |process|
-    process.output.gets_to_end
-  end
-end
-
-def run_persona_with_error(persona : String, extra_args : Array(String) = [] of String) : Tuple(String, String)
-  args = [persona] + extra_args
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => SPEC_FIXTURES.to_s}
-
-  output = ""
-  error = ""
-  Process.run("build/claude-persona", args, env: env, output: :pipe, error: :pipe) do |process|
-    output = process.output.gets_to_end
-    error = process.error.gets_to_end
-  end
-  {output, error}
+  run_binary([persona, "--dry-run"] + extra_args)[:output]
 end

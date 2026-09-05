@@ -12,7 +12,7 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["test-upgrade", "--dry-run"])
+        output = run_with_temp_config(temp_dir, ["test-upgrade", "--dry-run"])[:output]
 
         output.should contain("Upgraded persona 'test-upgrade'")
         output.should contain("0.0.0 ->")
@@ -33,7 +33,7 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["test-upgrade", "--dry-run"])
+        output = run_with_temp_config(temp_dir, ["test-upgrade", "--dry-run"])[:output]
 
         output.should contain("Upgraded persona 'test-upgrade'")
         output.should contain("0.0.1 ->")
@@ -50,7 +50,7 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["test-current", "--dry-run"])
+        output = run_with_temp_config(temp_dir, ["test-current", "--dry-run"])[:output]
 
         output.should_not contain("Upgraded persona")
       end
@@ -69,11 +69,11 @@ describe "upgrade integration" do
         File.chmod(persona_path, 0o444)
 
         begin
-          output, error = run_with_temp_config(temp_dir, ["test-readonly", "--dry-run"])
+          result = run_with_temp_config(temp_dir, ["test-readonly", "--dry-run"])
 
           # Should warn but still output dry-run command
-          error.should contain("read-only")
-          output.should contain("claude")
+          result[:error].should contain("read-only")
+          result[:output].should contain("claude")
         ensure
           # Restore permissions for cleanup
           File.chmod(persona_path, 0o644)
@@ -140,7 +140,7 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["list"])
+        output = run_with_temp_config(temp_dir, ["list"])[:output]
 
         output.should contain("test-list")
         output.should contain("v0.1.1")
@@ -156,7 +156,7 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["list"])
+        output = run_with_temp_config(temp_dir, ["list"])[:output]
 
         output.should contain("test-old")
         output.should contain("v0.0.1 -> v#{ClaudePersona::VERSION}")
@@ -171,37 +171,11 @@ describe "upgrade integration" do
         model = "sonnet"
         TOML
 
-        output, _ = run_with_temp_config(temp_dir, ["list"])
+        output = run_with_temp_config(temp_dir, ["list"])[:output]
 
         output.should contain("test-nover")
         output.should contain("unversioned -> v#{ClaudePersona::VERSION}")
       end
     end
   end
-end
-
-# Helper methods for temp directory testing
-def with_temp_config_dir(&)
-  temp_dir = Path[Dir.tempdir] / "claude-persona-test-#{Random.rand(100000)}"
-  Dir.mkdir_p(temp_dir / "personas")
-  Dir.mkdir_p(temp_dir / "mcp")
-
-  begin
-    yield temp_dir
-  ensure
-    FileUtils.rm_rf(temp_dir.to_s) if Dir.exists?(temp_dir)
-  end
-end
-
-def run_with_temp_config(config_dir : Path, args : Array(String)) : Tuple(String, String)
-  env = {"CLAUDE_PERSONA_CONFIG_DIR" => config_dir.to_s}
-  output = ""
-  error = ""
-
-  Process.run("build/claude-persona", args, env: env, output: :pipe, error: :pipe) do |process|
-    output = process.output.gets_to_end
-    error = process.error.gets_to_end
-  end
-
-  {output, error}
 end
