@@ -15,7 +15,7 @@ module ClaudePersona
       config_names.map do |name|
         path = MCP_DIR / "#{name}.json"
         unless File.exists?(path)
-          raise ConfigError.new("MCP config '#{name}' not found at #{path}")
+          raise McpConfigNotFound.new(name, path)
         end
         path.to_s
       end

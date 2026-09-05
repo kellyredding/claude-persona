@@ -44,8 +44,8 @@ describe ClaudePersona::McpHandler do
       paths.first.should end_with("test-mcp.json")
     end
 
-    it "raises ConfigError for missing MCP" do
-      expect_raises(ClaudePersona::ConfigError, /not found/) do
+    it "raises McpConfigNotFound for missing MCP" do
+      expect_raises(ClaudePersona::McpConfigNotFound, /not found/) do
         ClaudePersona::McpHandler.resolve_mcp_paths(["nonexistent"])
       end
     end

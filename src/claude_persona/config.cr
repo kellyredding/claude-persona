@@ -41,7 +41,7 @@ module ClaudePersona
     def self.load(name : String) : PersonaConfig
       path = PERSONAS_DIR / "#{name}.toml"
       unless File.exists?(path)
-        raise ConfigError.new("Persona '#{name}' not found at #{path}")
+        raise PersonaNotFound.new(name, path)
       end
       from_toml(File.read(path))
     end
@@ -94,8 +94,5 @@ module ClaudePersona
       @system = table["system"]?.try(&.as_s) || ""
       @initial_message = table["initial_message"]?.try(&.as_s) || ""
     end
-  end
-
-  class ConfigError < Exception
   end
 end

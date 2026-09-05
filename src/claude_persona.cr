@@ -1,3 +1,7 @@
+# Explicit and first: the glob below loads alphabetically, which would reach
+# the classes descending from Error before Error itself exists. A superclass
+# has to be defined at the point its subclass is compiled.
+require "./claude_persona/error"
 require "./claude_persona/*"
 
 module ClaudePersona

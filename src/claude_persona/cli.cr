@@ -71,31 +71,44 @@ module ClaudePersona
       command = positional_args.first
       rest = positional_args[1..]? || [] of String
 
-      case command
-      when "list"
-        list_personas
-      when "generate"
-        generate_persona(dryrun)
-      when "show"
-        show_persona(rest.first?)
-      when "rename"
-        rename_persona(rest[0]?, rest[1]?)
-      when "remove"
-        remove_persona(rest.first?)
-      when "mcp"
-        handle_mcp_command(rest)
-      when "update"
-        handle_update_command(rest)
-      when "track-session"
-        track_session(rest.first?)
-      when "help"
-        puts parser
-      when "version"
-        puts VERSION
-      else
-        # Assume it's a persona name, validate and launch
-        validate_and_launch_persona(command, resume_id, cli_session_id, vibe, dryrun, print_prompt, output_format)
+      guard do
+        case command
+        when "list"
+          list_personas
+        when "generate"
+          generate_persona(dryrun)
+        when "show"
+          show_persona(rest.first?)
+        when "rename"
+          rename_persona(rest[0]?, rest[1]?)
+        when "remove"
+          remove_persona(rest.first?)
+        when "mcp"
+          handle_mcp_command(rest)
+        when "update"
+          handle_update_command(rest)
+        when "track-session"
+          track_session(rest.first?)
+        when "help"
+          puts parser
+        when "version"
+          puts VERSION
+        else
+          # Assume it's a persona name, validate and launch
+          validate_and_launch_persona(command, resume_id, cli_session_id, vibe, dryrun, print_prompt, output_format)
+        end
       end
+    end
+
+    # One place where every anticipated failure becomes a readable line and a
+    # non-zero exit. Without it each command grows the same rescue clauses and
+    # they drift, which shows up as one command reporting a missing MCP config
+    # helpfully and another dumping a backtrace at the user.
+    private def self.guard(&)
+      yield
+    rescue e : ClaudePersona::Error
+      STDERR.puts "Error: #{e.message}"
+      exit(1)
     end
 
     private def self.build_banner : String
@@ -227,7 +240,7 @@ module ClaudePersona
         session = Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id)
         exit_code = session.run
         exit(exit_code)
-      rescue e : ConfigError
+      rescue e : ClaudePersona::Error
         STDERR.puts "Error: #{e.message}"
         exit(1)
       end
