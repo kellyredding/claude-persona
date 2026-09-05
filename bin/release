@@ -55,9 +55,8 @@ fi
 echo "==> Syncing version to shard.yml"
 sed "s/^version: .*/version: $VERSION/" shard.yml > shard.yml.tmp && mv shard.yml.tmp shard.yml
 
-# Sync version to source
-echo "==> Syncing version to source"
-sed "s/VERSION = \".*\"/VERSION = \"$VERSION\"/" src/claude_persona.cr > src/claude_persona.cr.tmp && mv src/claude_persona.cr.tmp src/claude_persona.cr
+# The binary needs no sync step: src/claude_persona.cr reads VERSION.txt at
+# compile time, so building below is what picks the new version up.
 
 # Sync version to test fixtures
 echo "==> Syncing version to test fixtures"
@@ -90,7 +89,7 @@ cd ..
 # Commit if there are changes
 if [ -n "$(git status --porcelain)" ]; then
   echo "==> Committing version $VERSION"
-  git add VERSION.txt shard.yml src/claude_persona.cr spec/fixtures/personas/*.toml
+  git add VERSION.txt shard.yml spec/fixtures/personas/*.toml
   git commit -m "Release $VERSION"
 fi
 

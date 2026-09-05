@@ -37,7 +37,7 @@ bin/release
 ```
 
 This will:
-- Sync version to `shard.yml`, source code, and test fixtures
+- Sync version to `shard.yml` and test fixtures
 - Build optimized release binary
 - Run test suite
 - Create tarball with SHA256 checksum
@@ -131,8 +131,11 @@ apt-get install crystal libssl-dev libxml2-dev libyaml-dev libgmp-dev
 
 ## Version Locations
 
-Version is defined in these places, all synced by `bin/release`:
-- `VERSION.txt` - Source of truth
+`VERSION.txt` is the source of truth. Two further locations are synced from it
+by `bin/release`:
 - `shard.yml` - Crystal package version
-- `src/claude_persona.cr` - `VERSION` constant
 - `spec/fixtures/personas/*.toml` - Test fixtures
+
+`src/claude_persona.cr` needs no sync. Its `VERSION` constant reads
+`VERSION.txt` at compile time, so the literal never appears in Crystal source
+and a build always carries whatever the file said.
