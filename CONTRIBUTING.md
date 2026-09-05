@@ -120,13 +120,17 @@ This removes:
 ```
 claude-persona/
 ├── src/
-│   ├── claude_persona.cr          # Entry point
+│   ├── claude_persona.cr          # Entry point, VERSION, config dir constants
 │   └── claude_persona/
+│       ├── error.cr               # Error base class + anticipated failures
 │       ├── cli.cr                 # CLI handler
 │       ├── config.cr              # TOML config parsing
 │       ├── command_builder.cr     # Claude CLI arg builder
 │       ├── session.cr             # Session runner + stats
+│       ├── session_hook_settings.cr # SessionStart hook settings file
 │       ├── mcp_config.cr          # MCP file handling
+│       ├── migrator.cr            # Persona schema migration
+│       ├── toml_writer.cr         # PersonaConfig -> TOML
 │       └── generator_prompt.cr    # Persona generator prompt
 ├── spec/
 │   ├── spec_helper.cr
