@@ -30,17 +30,59 @@ describe ClaudePersona::Migrator do
       config = ClaudePersona::PersonaConfig.from_toml(toml)
       ClaudePersona::Migrator.needs_upgrade?(config).should be_false
     end
+
+    it "returns false when version is ahead of this binary" do
+      toml = <<-TOML
+      version = "99.0.0"
+      model = "sonnet"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      ClaudePersona::Migrator.needs_upgrade?(config).should be_false
+    end
+  end
+
+  describe ".newer_than_binary?" do
+    it "returns true when version is ahead of this binary" do
+      toml = <<-TOML
+      version = "99.0.0"
+      model = "sonnet"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      ClaudePersona::Migrator.newer_than_binary?(config).should be_true
+    end
+
+    it "returns false when version matches current" do
+      toml = <<-TOML
+      version = "#{ClaudePersona::VERSION}"
+      model = "sonnet"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      ClaudePersona::Migrator.newer_than_binary?(config).should be_false
+    end
+
+    it "returns false when version is behind this binary" do
+      toml = <<-TOML
+      version = "0.0.1"
+      model = "sonnet"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      ClaudePersona::Migrator.newer_than_binary?(config).should be_false
+    end
   end
 
   describe ".effective_version" do
     it "returns version when present" do
       toml = <<-TOML
-      version = "1.2.3"
+      version = "#{ClaudePersona::VERSION}"
       model = "sonnet"
       TOML
 
       config = ClaudePersona::PersonaConfig.from_toml(toml)
-      ClaudePersona::Migrator.effective_version(config).should eq("1.2.3")
+      ClaudePersona::Migrator.effective_version(config).should eq(ClaudePersona::VERSION)
     end
 
     it "returns 0.0.0 when version is nil" do

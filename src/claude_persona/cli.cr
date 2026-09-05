@@ -235,6 +235,13 @@ module ClaudePersona
 
     # Check if persona needs upgrade and perform it
     private def self.maybe_upgrade_persona(name : String, config : PersonaConfig, path : Path) : PersonaConfig
+      if Migrator.newer_than_binary?(config)
+        STDERR.puts "Warning: Persona '#{name}' was written by a newer " \
+                    "claude-persona (#{Migrator.effective_version(config)} > #{VERSION}). " \
+                    "Leaving it as it is; update claude-persona to use it fully."
+        return config
+      end
+
       return config unless Migrator.needs_upgrade?(config)
 
       old_version = Migrator.effective_version(config)

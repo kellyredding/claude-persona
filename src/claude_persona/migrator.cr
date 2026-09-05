@@ -76,8 +76,17 @@ module ClaudePersona
     end
 
     # Check if persona needs upgrade
+    #
+    # Strictly older, not merely different. A persona stamped ahead of this
+    # binary was written by a newer claude-persona and may carry fields this
+    # one does not model; rewriting it through TomlWriter would drop them.
     def self.needs_upgrade?(config : PersonaConfig) : Bool
-      effective_version(config) != VERSION
+      compare_versions(effective_version(config), VERSION) < 0
+    end
+
+    # Persona was written by a newer claude-persona than the one running.
+    def self.newer_than_binary?(config : PersonaConfig) : Bool
+      compare_versions(effective_version(config), VERSION) > 0
     end
 
     # Get effective version (nil treated as "0.0.0")

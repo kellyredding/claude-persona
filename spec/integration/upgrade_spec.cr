@@ -56,6 +56,27 @@ describe "upgrade integration" do
       end
     end
 
+    it "warns and leaves a persona written by a newer claude-persona alone" do
+      with_temp_config_dir do |temp_dir|
+        persona_path = temp_dir / "personas" / "test-newer.toml"
+
+        original = <<-TOML
+        version = "99.0.0"
+        description = "From the future"
+        model = "sonnet"
+        TOML
+        File.write(persona_path, original)
+
+        result = run_with_temp_config(temp_dir, ["test-newer", "--dry-run"])
+
+        result[:error].should contain("newer claude-persona")
+        result[:output].should_not contain("Upgraded persona")
+
+        # The whole point: an older binary must not rewrite it back down.
+        File.read(persona_path).should eq(original)
+      end
+    end
+
     it "warns but continues for read-only persona" do
       with_temp_config_dir do |temp_dir|
         persona_path = temp_dir / "personas" / "test-readonly.toml"
