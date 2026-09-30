@@ -11,6 +11,24 @@ describe ClaudePersona::CommandBuilder do
       args.should contain("opus")
     end
 
+    it "includes effort flag after model when set" do
+      config = config_with_effort("high")
+      builder = ClaudePersona::CommandBuilder.new(config)
+
+      args = builder.build
+      effort_pos = args.index("--effort").not_nil!
+      args[effort_pos + 1].should eq("high")
+      args.index("--model").not_nil!.should be < effort_pos
+    end
+
+    it "omits effort flag when the persona does not set one" do
+      config = minimal_config
+      builder = ClaudePersona::CommandBuilder.new(config)
+
+      args = builder.build
+      args.should_not contain("--effort")
+    end
+
     it "includes system prompt when present" do
       config = config_with_prompt("You are helpful.")
       builder = ClaudePersona::CommandBuilder.new(config)
@@ -268,6 +286,14 @@ describe ClaudePersona::CommandBuilder do
       output.should contain("--model sonnet")
     end
 
+    it "includes --effort in formatted output when set" do
+      config = config_with_effort("xhigh")
+      builder = ClaudePersona::CommandBuilder.new(config)
+
+      output = builder.format_command
+      output.should contain("--effort xhigh")
+    end
+
     it "truncates long values" do
       long_prompt = "x" * 100
       config = config_with_prompt(long_prompt)
@@ -343,6 +369,15 @@ def minimal_config(model : String = "sonnet") : ClaudePersona::PersonaConfig
   ClaudePersona::PersonaConfig.from_toml(<<-TOML
   description = "Test"
   model = "#{model}"
+  TOML
+  )
+end
+
+def config_with_effort(effort : String) : ClaudePersona::PersonaConfig
+  ClaudePersona::PersonaConfig.from_toml(<<-TOML
+  description = "Test"
+  model = "opus"
+  effort = "#{effort}"
   TOML
   )
 end

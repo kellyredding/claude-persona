@@ -70,6 +70,9 @@ module ClaudePersona
       puts "=================================================="
       puts "Persona:  #{@persona_name}"
       puts "Model:    #{@config.model}"
+      if effort = @config.effort
+        puts "Effort:   #{effort}"
+      end
       puts "Runtime:  #{format_duration(duration)}"
       puts "Session:  #{@session_id}"
       puts ""
@@ -87,6 +90,9 @@ module ClaudePersona
       end
 
       puts "   Model: #{@config.model}"
+      if effort = @config.effort
+        puts "   Effort: #{effort}"
+      end
 
       # Display directories
       if dirs = @config.directories

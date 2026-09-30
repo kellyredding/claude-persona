@@ -6,6 +6,7 @@ module ClaudePersona
     getter version : String? # nil means pre-versioning (treat as "0.0.0")
     getter description : String
     getter model : String
+    getter effort : String? # nil leaves the level to Claude Code
     getter directories : DirectoriesConfig?
     getter mcp : McpConfig?
     getter tools : ToolsConfig?
@@ -16,6 +17,7 @@ module ClaudePersona
       @version = table["version"]?.try(&.as_s)
       @description = table["description"]?.try(&.as_s) || ""
       @model = table["model"]?.try(&.as_s) || "sonnet"
+      @effort = table["effort"]?.try(&.as_s).try { |e| e.empty? ? nil : e }
 
       if dirs_table = table["directories"]?.try(&.as_h)
         @directories = DirectoriesConfig.new(dirs_table)

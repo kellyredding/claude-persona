@@ -310,6 +310,9 @@ module ClaudePersona
             puts "    #{config.description}"
           end
           puts "    Model: #{config.model}"
+          if effort = config.effort
+            puts "    Effort: #{effort}"
+          end
           if mcp = config.mcp
             unless mcp.configs.empty?
               puts "    MCPs: #{mcp.configs.join(", ")}"

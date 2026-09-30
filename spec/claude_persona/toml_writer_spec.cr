@@ -43,6 +43,34 @@ describe ClaudePersona::TomlWriter do
       result.should_not contain("version = \"0.1.0\"")
     end
 
+    it "writes effort between model and version when set" do
+      toml_in = <<-TOML
+      model = "opus"
+      effort = "high"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml_in)
+      result = ClaudePersona::TomlWriter.to_toml(config)
+
+      result.should contain("effort = \"high\"")
+      effort_pos = result.index("effort =").not_nil!
+      result.index("model =").not_nil!.should be < effort_pos
+      effort_pos.should be < result.index("version =").not_nil!
+
+      ClaudePersona::PersonaConfig.from_toml(result).effort.should eq("high")
+    end
+
+    it "omits effort when the persona does not set one" do
+      toml_in = <<-TOML
+      model = "opus"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml_in)
+      result = ClaudePersona::TomlWriter.to_toml(config)
+
+      result.should_not contain("effort")
+    end
+
     it "serializes full config with all sections in order" do
       toml_in = <<-TOML
       version = "0.1.1"

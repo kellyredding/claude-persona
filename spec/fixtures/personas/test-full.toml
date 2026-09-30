@@ -1,5 +1,6 @@
 description = "Full featured test persona"
 model = "opus"
+effort = "high"
 version = "1.2.3"
 
 [directories]

@@ -194,6 +194,7 @@ After the interview, Claude proposes a name, shows a preview of the config, and 
 version = "1.2.3"  # managed by claude-persona — do not edit
 description = "Ruby on Rails developer"
 model = "sonnet"  # opus, sonnet, or haiku
+effort = "high"   # optional: low, medium, high, xhigh, or max
 
 [directories]
 allowed = [
@@ -233,6 +234,12 @@ to migrate the file and warn instead.
 
 Migration rewrites the whole file through the serializer, in a fixed field
 order. Comments and field ordering in a hand-edited persona do not survive it.
+
+**`effort` is optional.** When set, it is passed to Claude as `--effort <level>`
+and shown in the launch display. When left out, no `--effort` flag is passed and
+Claude Code uses its own default. The value is handed to Claude as written and
+is not checked, and Claude Code does not reject an unknown level either, so a
+misspelled one fails silently.
 
 ### MCP Format (JSON)
 

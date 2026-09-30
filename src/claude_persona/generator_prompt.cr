@@ -15,6 +15,9 @@ module ClaudePersona
     # Top-level metadata (description is optional)
     description = "Brief description of this persona's role"
     model = "sonnet"  # or "opus", "haiku"
+    # Optional: reasoning effort ("low", "medium", "high", "xhigh", "max").
+    # Omit to use Claude Code's own default.
+    # effort = "high"
 
     [directories]
     # Directories Claude can access without permission prompts
@@ -60,7 +63,7 @@ module ClaudePersona
        - A DevOps engineer for infrastructure work
        - A personal assistant that can manage calendar, day-to-day tasks, or be a listener for brain dumps
        - Something more specialized or unique to their workflow
-    2. **Model Selection**: Does this need high reasoning (opus), balanced (sonnet), or fast/cheap (haiku)?
+    2. **Model Selection**: Does this need high reasoning (opus), balanced (sonnet), or fast/cheap (haiku)? Only set `effort` if the user asks for a specific reasoning effort; otherwise leave it out.
     3. **Directory Access**: What directories will this developer role typically work in?
     4. **MCP Servers**: Does it need external integrations? (They must already be imported via `claude-persona mcp import`)
     5. **Tool Permissions**: Any tools to restrict? Any dangerous operations to prevent?

@@ -102,6 +102,23 @@ describe "upgrade integration" do
       end
     end
 
+    it "does not add effort to a persona that never set one" do
+      with_temp_config_dir do |temp_dir|
+        persona_path = temp_dir / "personas" / "test-no-effort.toml"
+
+        File.write(persona_path, <<-TOML)
+        description = "Unset level"
+        model = "opus"
+        TOML
+
+        output = run_with_temp_config(temp_dir, ["test-no-effort", "--dry-run"])[:output]
+
+        output.should contain("Upgraded persona 'test-no-effort'")
+        output.should_not contain("--effort")
+        File.read(persona_path).should_not contain("effort")
+      end
+    end
+
     it "preserves all config data after upgrade" do
       with_temp_config_dir do |temp_dir|
         persona_path = temp_dir / "personas" / "test-full-upgrade.toml"
@@ -109,6 +126,7 @@ describe "upgrade integration" do
         File.write(persona_path, <<-TOML)
         description = "Full test"
         model = "opus"
+        effort = "high"
 
         [directories]
         allowed = ["~/projects"]
@@ -135,6 +153,7 @@ describe "upgrade integration" do
         updated_content.should contain("version = \"#{ClaudePersona::VERSION}\"")
         updated_content.should contain("description = \"Full test\"")
         updated_content.should contain("model = \"opus\"")
+        updated_content.should contain("effort = \"high\"")
         updated_content.should contain("[directories]")
         updated_content.should contain("~/projects")
         updated_content.should contain("[mcp]")

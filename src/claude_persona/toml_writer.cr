@@ -12,6 +12,10 @@ module ClaudePersona
       # Model
       lines << "model = #{quote(config.model)}"
 
+      if effort = config.effort
+        lines << "effort = #{quote(effort)}"
+      end
+
       # Version (after description and model for readability)
       version = version_override || config.version || VERSION
       lines << "version = #{quote(version)}"

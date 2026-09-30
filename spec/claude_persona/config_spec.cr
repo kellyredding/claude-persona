@@ -11,6 +11,7 @@ describe ClaudePersona::PersonaConfig do
       config.version.should be_nil
       config.description.should eq("") # default
       config.model.should eq("sonnet")
+      config.effort.should be_nil
       config.directories.should be_nil
       config.mcp.should be_nil
       config.tools.should be_nil
@@ -35,6 +36,26 @@ describe ClaudePersona::PersonaConfig do
 
       config = ClaudePersona::PersonaConfig.from_toml(toml)
       config.version.should be_nil
+    end
+
+    it "parses effort field" do
+      toml = <<-TOML
+      model = "opus"
+      effort = "high"
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      config.effort.should eq("high")
+    end
+
+    it "treats an empty effort as unset" do
+      toml = <<-TOML
+      model = "opus"
+      effort = ""
+      TOML
+
+      config = ClaudePersona::PersonaConfig.from_toml(toml)
+      config.effort.should be_nil
     end
 
     it "parses all config sections" do

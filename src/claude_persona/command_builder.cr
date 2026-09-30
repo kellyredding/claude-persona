@@ -29,6 +29,7 @@ module ClaudePersona
     def build : Array(String)
       add_session_id
       add_model
+      add_effort
       add_system_prompt
       add_directories
       add_tools
@@ -55,6 +56,12 @@ module ClaudePersona
 
     private def add_model
       @args << "--model" << @config.model
+    end
+
+    private def add_effort
+      if effort = @config.effort
+        @args << "--effort" << effort
+      end
     end
 
     private def add_system_prompt

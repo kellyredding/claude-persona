@@ -8,12 +8,14 @@ describe "dryrun integration" do
       output.should contain("claude")
       output.should contain("--model sonnet")
       output.should contain("--permission-mode default")
+      output.should_not contain("--effort")
     end
 
     it "outputs claude command for full persona" do
       output = run_dryrun("test-full")
 
       output.should contain("--model opus")
+      output.should contain("--effort high")
       output.should contain("--permission-mode acceptEdits")
       output.should contain("--system-prompt")
       output.should contain("--add-dir")
