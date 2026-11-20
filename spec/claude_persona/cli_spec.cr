@@ -25,6 +25,23 @@ describe ClaudePersona::CLI do
       command_exists?("nonexistent-command-abc123").should be_false
     end
   end
+
+  describe ".exit_code_for" do
+    it "returns the exit code of a child that exited" do
+      status = Process.run("sh", args: ["-c", "exit 3"])
+      ClaudePersona::CLI.exit_code_for(status).should eq(3)
+    end
+
+    it "returns 0 for a child that succeeded" do
+      status = Process.run("sh", args: ["-c", "exit 0"])
+      ClaudePersona::CLI.exit_code_for(status).should eq(0)
+    end
+
+    it "returns 128 + the signal number for a child killed by a signal" do
+      status = Process.run("sh", args: ["-c", "kill -TERM $$"])
+      ClaudePersona::CLI.exit_code_for(status).should eq(128 + Signal::TERM.value)
+    end
+  end
 end
 
 describe "persona name validation" do

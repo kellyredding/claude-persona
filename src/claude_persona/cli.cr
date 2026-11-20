@@ -716,7 +716,13 @@ module ClaudePersona
         error: Process::Redirect::Inherit
       )
 
-      exit(status.exit_code)
+      exit(exit_code_for(status))
+    end
+
+    # A child killed by a signal has no exit code; report it the way a
+    # shell does, as 128 + the signal number.
+    def self.exit_code_for(status : Process::Status) : Int32
+      status.exit_code? || status.exit_signal?.try { |signal| 128 + signal.value } || 1
     end
 
     private def self.command_exists?(cmd : String) : Bool
