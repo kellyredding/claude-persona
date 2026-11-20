@@ -11,14 +11,14 @@ module ClaudePersona
       initial_message : String? = nil,
       print_prompt : String? = nil,
       output_format : String? = nil,
-      settings_path : String? = nil,
+      settings : String? = nil,
     )
       @session_id = session_id
       @resuming = resuming
       @vibe = vibe
       @print_prompt = print_prompt
       @output_format = output_format
-      @settings_path = settings_path
+      @settings = settings
       @args = [] of String
 
       # Use provided initial_message, or fall back to config's initial_message
@@ -135,8 +135,8 @@ module ClaudePersona
     end
 
     private def add_settings
-      if path = @settings_path
-        @args << "--settings" << path
+      if settings = @settings
+        @args << "--settings" << settings
       end
     end
 

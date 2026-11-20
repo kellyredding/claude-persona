@@ -5,7 +5,7 @@ require "uuid"
 module ClaudePersona
   class CLI
     # Subcommand names that cannot be used as persona names
-    RESERVED_NAMES = %w[list generate show rename remove mcp update track-session help version]
+    RESERVED_NAMES = %w[list generate show rename remove mcp update help version]
 
     # Model used for the persona generator
     GENERATOR_MODEL = "opus"
@@ -87,8 +87,6 @@ module ClaudePersona
           handle_mcp_command(rest)
         when "update"
           handle_update_command(rest)
-        when "track-session"
-          track_session(rest.first?)
         when "help"
           puts parser
         when "version"
@@ -127,7 +125,6 @@ module ClaudePersona
         show <persona>          Display persona configuration
         rename <old> <new>      Rename a persona
         remove <persona>        Delete a persona
-        track-session <file>    Write session ID from hook to file
         update                  Update to latest version
         update preview          Preview update without changes
         update force            Reinstall latest version
@@ -196,8 +193,8 @@ module ClaudePersona
 
         if dryrun
           session_id = resume_id || cli_session_id || UUID.random.to_s
-          # Session tracking only applies to interactive sessions, not print mode
-          settings_placeholder = print_prompt ? nil : "/tmp/claude-persona-settings-XXXXXX.json"
+          # Only interactive launches carry settings, as Session#run builds them
+          settings = print_prompt ? nil : SessionSettings.json(session_id)
           builder = CommandBuilder.new(
             config,
             session_id: session_id,
@@ -205,7 +202,7 @@ module ClaudePersona
             vibe: vibe,
             print_prompt: print_prompt,
             output_format: output_format,
-            settings_path: settings_placeholder,
+            settings: settings,
           )
           puts builder.format_command
           return
@@ -226,20 +223,10 @@ module ClaudePersona
             print_prompt: print_prompt,
             output_format: output_format,
           )
-          args = builder.build
-
-          status = Process.run("claude",
-            args: args,
-            input: Process::Redirect::Inherit,
-            output: Process::Redirect::Inherit,
-            error: Process::Redirect::Inherit,
-          )
-          exit(status.exit_code)
+          ClaudeExec.exec(builder.build)
         end
 
-        session = Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id)
-        exit_code = session.run
-        exit(exit_code)
+        Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id).run
       rescue e : ClaudePersona::Error
         STDERR.puts "Error: #{e.message}"
         exit(1)
@@ -364,12 +351,7 @@ module ClaudePersona
       puts "   Claude will interview you and create a new persona config."
       puts ""
 
-      Process.run("claude",
-        args: args,
-        input: Process::Redirect::Inherit,
-        output: Process::Redirect::Inherit,
-        error: Process::Redirect::Inherit
-      )
+      ClaudeExec.exec(args)
     end
 
     private def self.format_generate_command(args : Array(String), initial_message : String? = nil) : String
@@ -698,44 +680,6 @@ module ClaudePersona
         claude-persona mcp show <name>        Display imported MCP config
         claude-persona mcp remove <name>      Delete imported MCP config
       HELP
-    end
-
-    private def self.track_session(output_path : String?)
-      unless output_path
-        STDERR.puts "Usage: claude-persona track-session <output-file>"
-        STDERR.puts ""
-        STDERR.puts "Reads Claude Code SessionStart hook JSON from stdin"
-        STDERR.puts "and writes the session_id to the specified file."
-        STDERR.puts ""
-        STDERR.puts "This is used internally by claude-persona's session"
-        STDERR.puts "tracking hook to keep the resume command accurate"
-        STDERR.puts "across /clear and compaction resets."
-        STDERR.puts ""
-        STDERR.puts "Example:"
-        STDERR.puts "  echo '{\"session_id\":\"abc-123\"}' | claude-persona track-session /tmp/session.id"
-        STDERR.puts ""
-        STDERR.puts "Settings injected via --settings:"
-        STDERR.puts SessionHookSettings.example_settings_json
-        exit(1)
-      end
-
-      # When called as a hook, failures must be silent (exit 0) so they
-      # never disrupt the Claude session. The worst case is the tracking
-      # file doesn't update and the summary falls back to the original
-      # session ID — the same behavior as before this feature existed.
-      begin
-        input = STDIN.gets_to_end
-        return if input.empty?
-
-        data = JSON.parse(input)
-        if session_id = data["session_id"]?.try(&.as_s)
-          File.write(output_path, session_id)
-        end
-      rescue
-        # Silent failure — do not write to stderr or exit non-zero.
-        # This runs as a Claude Code SessionStart hook; any noise or
-        # non-zero exit could surface confusing output to the user.
-      end
     end
 
     private def self.handle_update_command(args : Array(String))

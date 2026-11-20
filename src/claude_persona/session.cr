@@ -4,82 +4,27 @@ module ClaudePersona
   class Session
     getter persona_name : String
     getter config : PersonaConfig
-    getter start_time : Time
-    getter end_time : Time?
     getter resume_session_id : String?
     getter session_id : String
     getter vibe : Bool
-    getter settings_path : String?
-    getter session_id_path : String?
 
     def initialize(@persona_name : String, @config : PersonaConfig, @resume_session_id : String? = nil, @vibe : Bool = false, cli_session_id : String? = nil)
-      @start_time = Time.local
       # Priority: resume ID > CLI-injected ID > generate new UUID
       @session_id = @resume_session_id || cli_session_id || UUID.random.to_s
     end
 
-    def run : Int32
-      # Create session tracking hook
-      @settings_path, @session_id_path =
-        SessionHookSettings.create(@session_id)
-
+    def run : NoReturn
       args = CommandBuilder.new(
         @config,
         session_id: @session_id,
         resuming: !@resume_session_id.nil?,
         vibe: @vibe,
-        settings_path: @settings_path,
+        settings: SessionSettings.json(@session_id),
       ).build
 
       display_launch_info
 
-      # Run Claude interactively
-      status = Process.run("claude",
-        args: args,
-        input: Process::Redirect::Inherit,
-        output: Process::Redirect::Inherit,
-        error: Process::Redirect::Inherit
-      )
-
-      @end_time = Time.local
-
-      # Read latest session ID (may have changed via /clear or compaction)
-      if path = @session_id_path
-        if tracked_id = SessionHookSettings.read_session_id(path)
-          @session_id = tracked_id
-        end
-      end
-
-      # Display session summary
-      display_summary
-
-      # Clean up temp files
-      SessionHookSettings.cleanup(@settings_path, @session_id_path)
-
-      status.exit_code
-    end
-
-    private def display_summary
-      return unless end_time = @end_time
-
-      duration = end_time - @start_time
-
-      puts ""
-      puts "=================================================="
-      puts "\u{1F3C1} Claude Persona Summary"
-      puts "=================================================="
-      puts "Persona:  #{@persona_name}"
-      puts "Model:    #{@config.model}"
-      if effort = @config.effort
-        puts "Effort:   #{effort}"
-      end
-      puts "Runtime:  #{format_duration(duration)}"
-      puts "Session:  #{@session_id}"
-      puts ""
-      vibe_flag = @vibe ? " --vibe" : ""
-      puts "Resume:   claude-persona #{@persona_name} --resume #{@session_id}#{vibe_flag}"
-
-      puts "=================================================="
+      ClaudeExec.exec(args)
     end
 
     private def display_launch_info
@@ -145,21 +90,6 @@ module ClaudePersona
       end
 
       puts ""
-    end
-
-    private def format_duration(duration : Time::Span) : String
-      total_seconds = duration.total_seconds.to_i
-      hours = total_seconds // 3600
-      minutes = (total_seconds % 3600) // 60
-      seconds = total_seconds % 60
-
-      if hours > 0
-        "#{hours}h #{minutes}m #{seconds}s"
-      elsif minutes > 0
-        "#{minutes}m #{seconds}s"
-      else
-        "#{seconds}s"
-      end
     end
   end
 end

@@ -16,7 +16,7 @@ _claude_persona() {
     local cur prev words cword
     _init_completion || return
 
-    local commands="list generate show rename remove track-session update mcp help version"
+    local commands="list generate show rename remove update mcp help version"
     local mcp_commands="available list import import-all show remove"
     local update_commands="preview force help"
     local global_opts="--vibe --dangerously-skip-permissions --dry-run --print --resume --output-format --help --version -p -r -h -v"
@@ -65,10 +65,6 @@ _claude_persona() {
                 update)
                     # Update subcommands
                     COMPREPLY=($(compgen -W "${update_commands}" -- "${cur}"))
-                    ;;
-                track-session)
-                    # Takes a file path argument
-                    COMPREPLY=($(compgen -f -- "${cur}"))
                     ;;
                 --resume|-r)
                     # Session ID - no completion available

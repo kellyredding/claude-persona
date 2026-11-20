@@ -101,11 +101,11 @@ describe "dryrun integration" do
       output.should_not contain("Start your task now.")
     end
 
-    it "includes --settings placeholder for session tracking" do
+    it "includes the inline --settings carrying the session id" do
       output = run_dryrun("test-basic")
 
       output.should contain("--settings")
-      output.should contain("/tmp/claude-persona-settings-XXXXXX.json")
+      output.should contain(%({"env":{"CLAUDE_CLI_SESSION_ID":))
     end
 
     it "omits --settings in print mode" do

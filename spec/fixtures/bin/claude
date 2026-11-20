@@ -1,0 +1,31 @@
+#!/bin/bash
+# Stands in for Claude Code in the launch specs. Writes how it was started into
+# the directory FAKE_CLAUDE_OUT, creates FAKE_CLAUDE_MARKER last, and exits with
+# FAKE_CLAUDE_EXIT. Bash 3.2, as macOS ships it.
+set -eu
+
+out="${FAKE_CLAUDE_OUT:?}"
+mkdir -p "$out"
+
+echo "$$" > "$out/pid"
+echo "$PPID" > "$out/ppid"
+
+: > "$out/args"
+settings=""
+previous=""
+for arg in "$@"; do
+  printf '%s\0' "$arg" >> "$out/args"
+  if [ "$previous" = "--settings" ]; then
+    settings="$arg"
+  fi
+  previous="$arg"
+done
+printf '%s' "$settings" > "$out/settings"
+
+# How SIGPIPE was inherited: yes dies of it (141) under the default
+# disposition, and gets EPIPE and exits 1 when it is ignored.
+/usr/bin/yes 2>/dev/null | /usr/bin/head -1 >/dev/null
+echo "${PIPESTATUS[0]}" > "$out/sigpipe"
+
+: > "${FAKE_CLAUDE_MARKER:?}"
+exit "${FAKE_CLAUDE_EXIT:-0}"

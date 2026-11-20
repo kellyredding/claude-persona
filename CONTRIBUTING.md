@@ -86,7 +86,7 @@ rm ~/bin/claude-persona  # Remove symlink
 
 The test suite includes:
 - **Unit specs** in `spec/claude_persona/` - test individual components
-- **Integration specs** in `spec/integration/` - test CLI dryrun output
+- **Integration specs** in `spec/integration/` - run the built binary; launch specs replace `claude` with the fake in `spec/fixtures/bin/`
 
 Integration specs require the binary to exist. Use `make check` (not just `make test`) to ensure the binary is built first.
 
@@ -126,8 +126,9 @@ claude-persona/
 │       ├── cli.cr                 # CLI handler
 │       ├── config.cr              # TOML config parsing
 │       ├── command_builder.cr     # Claude CLI arg builder
-│       ├── session.cr             # Session runner + stats
-│       ├── session_hook_settings.cr # SessionStart hook settings file
+│       ├── session.cr             # Interactive launch, session UUID
+│       ├── session_settings.cr    # Inline --settings JSON
+│       ├── claude_exec.cr         # Replaces the process with claude
 │       ├── mcp_config.cr          # MCP file handling
 │       ├── migrator.cr            # Persona schema migration
 │       ├── toml_writer.cr         # PersonaConfig -> TOML
@@ -135,6 +136,7 @@ claude-persona/
 ├── spec/
 │   ├── spec_helper.cr
 │   ├── fixtures/
+│   │   ├── bin/                   # Fake claude for launch specs
 │   │   ├── personas/              # Test persona TOML files
 │   │   ├── mcp/                   # Test imported MCP configs
 │   │   └── claude/                # Mock Claude config files

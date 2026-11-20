@@ -247,16 +247,16 @@ describe ClaudePersona::CommandBuilder do
       args.should_not contain("--output-format")
     end
 
-    it "adds --settings when path provided" do
+    it "adds --settings when provided" do
       config = minimal_config
       builder = ClaudePersona::CommandBuilder.new(
         config,
-        settings_path: "/tmp/test-settings.json",
+        settings: %({"env":{}}),
       )
 
       args = builder.build
       args.should contain("--settings")
-      args.should contain("/tmp/test-settings.json")
+      args.should contain(%({"env":{}}))
     end
 
     it "omits --settings when nil" do
@@ -354,12 +354,12 @@ describe ClaudePersona::CommandBuilder do
       config = minimal_config
       builder = ClaudePersona::CommandBuilder.new(
         config,
-        settings_path: "/tmp/test-settings.json",
+        settings: %({"env":{}}),
       )
 
       output = builder.format_command
       output.should contain("--settings")
-      output.should contain("/tmp/test-settings.json")
+      output.should contain(%({"env":{}}))
     end
   end
 end

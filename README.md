@@ -287,24 +287,17 @@ When resuming a session with vibe mode and auto-start:
 
 The `😎 Vibe mode` indicator shows when `--vibe` is used. The `💬 Auto-start enabled` indicator shows when the persona has an `initial_message` configured.
 
-## Session Summary
+## Resuming a Session
 
-After each session, claude-persona displays:
+claude-persona replaces itself with Claude Code once it has printed the launch
+details, so a terminal or app that stops the session stops Claude Code itself.
+Nothing runs after Claude Code exits, so there is no exit summary. To continue a
+conversation with the full persona config (MCP servers, system prompt, tools),
+resume it through the persona with its session ID:
 
+```bash
+claude-persona rails-dev --resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
 ```
-==================================================
-🏁 Claude Persona Summary
-==================================================
-Persona:  rails-dev
-Model:    sonnet
-Runtime:  45m 23s
-Session:  a1b2c3d4-e5f6-7890-abcd-ef1234567890
-
-Resume:   claude-persona rails-dev --resume a1b2c3d4-e5f6-7890-abcd-ef1234567890
-==================================================
-```
-
-The resume command applies your full persona config (MCP servers, system prompt, tools) while continuing the conversation. If you launched with `--vibe`, the resume command will include that flag too.
 
 ## Vibe Mode
 
