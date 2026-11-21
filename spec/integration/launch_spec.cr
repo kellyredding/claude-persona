@@ -82,6 +82,23 @@ describe "launch" do
       settings = JSON.parse(run.settings)
       settings["env"]["CLAUDE_CLI_SESSION_ID"].as_s.should eq(session_id)
     end
+
+    it "hands claude a host's overrides after the persona's flags" do
+      host = %({"hooks":{"PermissionRequest":[{"hooks":[{"type":"command","command":"allow"}]}]}})
+      run = run_with_fake_claude([
+        "test-full", "--vibe",
+        "--disallowed-tools", "AskUserQuestion,EnterPlanMode",
+        "--settings", host,
+      ])
+
+      last = run.args.rindex("--disallowed-tools").not_nil!
+      last.should be > run.args.index("--disallowed-tools").not_nil!
+      run.args[last + 1, 2].should eq(["AskUserQuestion", "EnterPlanMode"])
+
+      settings = JSON.parse(run.settings)
+      settings["hooks"]["PermissionRequest"][0]["hooks"][0]["command"].as_s.should eq("allow")
+      settings["env"]["CLAUDE_CLI_SESSION_ID"].as_s.should_not be_empty
+    end
   end
 
   describe "print mode" do

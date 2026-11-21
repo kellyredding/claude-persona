@@ -121,6 +121,36 @@ describe "dryrun integration" do
       output.should contain("aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee")
     end
 
+    it "applies --permission-mode after the persona's own" do
+      output = run_dryrun("test-full", ["--permission-mode", "dontAsk"])
+
+      output.index("--permission-mode acceptEdits").not_nil!.should be <
+                                                                    output.index("--permission-mode dontAsk").not_nil!
+    end
+
+    it "collects repeated and comma-separated --disallowed-tools" do
+      output = run_dryrun(
+        "test-basic",
+        ["--disallowed-tools", "AskUserQuestion,EnterPlanMode", "--disallowed-tools", "ExitPlanMode"],
+      )
+
+      output.should contain("--disallowed-tools AskUserQuestion EnterPlanMode ExitPlanMode")
+    end
+
+    it "merges --settings into the inline settings" do
+      output = run_dryrun("test-basic", ["--settings", %({"env":{"FOO":"bar"}})])
+
+      output.should contain("--settings")
+      output.should contain("FOO")
+    end
+
+    it "passes --settings alone in print mode" do
+      output = run_dryrun("test-basic", ["-p", "Hello", "--settings", %({"env":{"FOO":"bar"}})])
+
+      output.should contain(%(--settings {"env":{"FOO":"bar"}}))
+      output.should_not contain("CLAUDE_CLI_SESSION_ID")
+    end
+
     it "combines --session-id with --vibe" do
       output = run_dryrun("test-basic", ["--session-id", "aaaaaaaa-bbbb-4ccc-9ddd-eeeeeeeeeeee", "--vibe"])
 
@@ -176,6 +206,20 @@ describe "dryrun integration" do
       result = run_binary(["test-basic", "--session-id", "some-uuid", "--resume", "abc-123"])
 
       result[:error].should contain("--session-id and --resume cannot be used together")
+    end
+
+    it "errors when --settings is not a JSON object" do
+      result = run_binary(["test-basic", "--dry-run", "--settings", "[1]"])
+
+      result[:status].should eq(1)
+      result[:error].should contain("--settings must be a JSON object")
+    end
+
+    it "still rejects unknown flags" do
+      result = run_binary(["test-basic", "--dry-run", "--no-such-flag"])
+
+      result[:status].should eq(1)
+      result[:error].should contain("Unknown flag '--no-such-flag'")
     end
   end
 

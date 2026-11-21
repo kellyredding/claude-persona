@@ -18,6 +18,9 @@ module ClaudePersona
       cli_session_id : String? = nil
       print_prompt : String? = nil
       output_format : String? = nil
+      permission_mode : String? = nil
+      disallowed_tools = [] of String
+      host_settings : String? = nil
       show_help_flag = false
       show_version_flag = false
 
@@ -35,6 +38,11 @@ module ClaudePersona
         p.on("--output-format=FORMAT", "Output format: text, json, stream-json (use with -p)") { |fmt| output_format = fmt }
         p.on("-r ID", "--resume=ID", "Resume a previous session") { |id| resume_id = id }
         p.on("--session-id=ID", "Use a specific session ID (for external launchers)") { |id| cli_session_id = id }
+        p.on("--permission-mode=MODE", "Permission mode, applied after the persona's own") { |mode| permission_mode = mode }
+        p.on("--disallowed-tools=TOOLS", "Tools to deny on top of the persona's (repeatable, comma-separated)") do |tools|
+          disallowed_tools.concat(tools.split(',').map(&.strip).reject(&.empty?))
+        end
+        p.on("--settings=JSON", "Settings JSON object merged into the launch settings") { |json| host_settings = json }
         p.on("-h", "--help", "Show this help") { show_help_flag = true }
         p.on("-v", "--version", "Show version") { show_version_flag = true }
 
@@ -93,7 +101,12 @@ module ClaudePersona
           puts VERSION
         else
           # Assume it's a persona name, validate and launch
-          validate_and_launch_persona(command, resume_id, cli_session_id, vibe, dryrun, print_prompt, output_format)
+          overrides = LaunchOverrides.new(
+            permission_mode: permission_mode,
+            disallowed_tools: disallowed_tools,
+            settings: host_settings,
+          )
+          validate_and_launch_persona(command, resume_id, cli_session_id, vibe, dryrun, print_prompt, output_format, overrides)
         end
       end
     end
@@ -118,6 +131,7 @@ module ClaudePersona
         claude-persona <persona> --resume ID          Resume a session
         claude-persona <persona> --session-id ID      Use a specific session ID
         claude-persona <persona> -p "prompt"          One-shot: print response and exit
+        claude-persona <persona> --disallowed-tools T Deny tools on top of the persona's
 
       Commands:
         list                    List available personas
@@ -147,6 +161,7 @@ module ClaudePersona
       dryrun : Bool,
       print_prompt : String?,
       output_format : String?,
+      overrides : LaunchOverrides,
     )
       ensure_config_dirs
 
@@ -193,8 +208,13 @@ module ClaudePersona
 
         if dryrun
           session_id = resume_id || cli_session_id || UUID.random.to_s
-          # Only interactive launches carry settings, as Session#run builds them
-          settings = print_prompt ? nil : SessionSettings.json(session_id)
+          # Only interactive launches carry the session id, as Session#run
+          # builds it; print mode carries a host's settings alone
+          settings = if print_prompt
+                       SessionSettings.host_json(overrides.settings)
+                     else
+                       SessionSettings.json(session_id, overrides.settings)
+                     end
           builder = CommandBuilder.new(
             config,
             session_id: session_id,
@@ -203,6 +223,7 @@ module ClaudePersona
             print_prompt: print_prompt,
             output_format: output_format,
             settings: settings,
+            overrides: overrides,
           )
           puts builder.format_command
           return
@@ -222,11 +243,13 @@ module ClaudePersona
             vibe: vibe,
             print_prompt: print_prompt,
             output_format: output_format,
+            settings: SessionSettings.host_json(overrides.settings),
+            overrides: overrides,
           )
           ClaudeExec.exec(builder.build)
         end
 
-        Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id).run
+        Session.new(name, config, resume_id, vibe, cli_session_id: cli_session_id, overrides: overrides).run
       rescue e : ClaudePersona::Error
         STDERR.puts "Error: #{e.message}"
         exit(1)

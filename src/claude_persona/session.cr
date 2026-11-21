@@ -8,7 +8,16 @@ module ClaudePersona
     getter session_id : String
     getter vibe : Bool
 
-    def initialize(@persona_name : String, @config : PersonaConfig, @resume_session_id : String? = nil, @vibe : Bool = false, cli_session_id : String? = nil)
+    getter overrides : LaunchOverrides
+
+    def initialize(
+      @persona_name : String,
+      @config : PersonaConfig,
+      @resume_session_id : String? = nil,
+      @vibe : Bool = false,
+      cli_session_id : String? = nil,
+      @overrides : LaunchOverrides = LaunchOverrides.new,
+    )
       # Priority: resume ID > CLI-injected ID > generate new UUID
       @session_id = @resume_session_id || cli_session_id || UUID.random.to_s
     end
@@ -19,7 +28,8 @@ module ClaudePersona
         session_id: @session_id,
         resuming: !@resume_session_id.nil?,
         vibe: @vibe,
-        settings: SessionSettings.json(@session_id),
+        settings: SessionSettings.json(@session_id, @overrides.settings),
+        overrides: @overrides,
       ).build
 
       display_launch_info
@@ -80,6 +90,13 @@ module ClaudePersona
       # Display vibe mode
       if @vibe
         puts "   \u{1F60E} Vibe mode"
+      end
+
+      if mode = @overrides.permission_mode
+        puts "   Permission mode (launch): #{mode}"
+      end
+      unless @overrides.disallowed_tools.empty?
+        puts "   Disallowed tools (launch): #{@overrides.disallowed_tools.join(", ")}"
       end
 
       # Display auto-start indicator

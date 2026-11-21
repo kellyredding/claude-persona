@@ -22,4 +22,10 @@ module ClaudePersona
       super("MCP config '#{name}' not found at #{path}")
     end
   end
+
+  class InvalidSettingsError < Error
+    def initialize(reason : String)
+      super("--settings must be a JSON object: #{reason}")
+    end
+  end
 end

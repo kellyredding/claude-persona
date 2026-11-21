@@ -266,6 +266,74 @@ describe ClaudePersona::CommandBuilder do
       args = builder.build
       args.should_not contain("--settings")
     end
+
+    describe "with launch overrides" do
+      it "places the override permission mode after the persona's" do
+        config = config_with_permissions("acceptEdits")
+        builder = ClaudePersona::CommandBuilder.new(
+          config,
+          overrides: ClaudePersona::LaunchOverrides.new(permission_mode: "dontAsk"),
+        )
+
+        args = builder.build
+        first = args.index("--permission-mode").not_nil!
+        last = args.rindex("--permission-mode").not_nil!
+        last.should be > first
+        args[first + 1].should eq("acceptEdits")
+        args[last + 1].should eq("dontAsk")
+      end
+
+      it "adds the override disallowed tools after the persona's, in order" do
+        config = config_with_tools(disallowed: ["Bash(rm:*)"])
+        builder = ClaudePersona::CommandBuilder.new(
+          config,
+          overrides: ClaudePersona::LaunchOverrides.new(
+            disallowed_tools: ["AskUserQuestion", "EnterPlanMode"],
+          ),
+        )
+
+        args = builder.build
+        args.count("--disallowed-tools").should eq(2)
+        last = args.rindex("--disallowed-tools").not_nil!
+        last.should be > args.index("Bash(rm:*)").not_nil!
+        args[last + 1, 2].should eq(["AskUserQuestion", "EnterPlanMode"])
+      end
+
+      it "keeps the overrides ahead of the initial message" do
+        config = config_with_initial_message("Begin your task.")
+        builder = ClaudePersona::CommandBuilder.new(
+          config,
+          overrides: ClaudePersona::LaunchOverrides.new(disallowed_tools: ["AskUserQuestion"]),
+        )
+
+        args = builder.build
+        args.index("AskUserQuestion").not_nil!.should be < args.index("--").not_nil!
+        args.last.should eq("Begin your task.")
+      end
+
+      it "adds nothing when no overrides are given" do
+        config = minimal_config
+        args = ClaudePersona::CommandBuilder.new(config).build
+
+        args.should_not contain("--permission-mode")
+        args.should_not contain("--disallowed-tools")
+      end
+
+      it "shows the overrides in formatted output" do
+        config = minimal_config
+        builder = ClaudePersona::CommandBuilder.new(
+          config,
+          overrides: ClaudePersona::LaunchOverrides.new(
+            permission_mode: "dontAsk",
+            disallowed_tools: ["AskUserQuestion", "EnterPlanMode"],
+          ),
+        )
+
+        output = builder.format_command
+        output.should contain("--permission-mode dontAsk")
+        output.should contain("--disallowed-tools AskUserQuestion EnterPlanMode")
+      end
+    end
   end
 
   describe "#format_command" do

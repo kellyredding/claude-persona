@@ -12,6 +12,7 @@ module ClaudePersona
       print_prompt : String? = nil,
       output_format : String? = nil,
       settings : String? = nil,
+      overrides : LaunchOverrides = LaunchOverrides.new,
     )
       @session_id = session_id
       @resuming = resuming
@@ -19,6 +20,7 @@ module ClaudePersona
       @print_prompt = print_prompt
       @output_format = output_format
       @settings = settings
+      @overrides = overrides
       @args = [] of String
 
       # Use provided initial_message, or fall back to config's initial_message
@@ -36,6 +38,7 @@ module ClaudePersona
       add_mcp_configs
       add_permission_mode
       add_vibe_mode
+      add_overrides
       add_print_mode
       add_output_format
       add_settings
@@ -117,6 +120,17 @@ module ClaudePersona
     private def add_vibe_mode
       if @vibe
         @args << "--dangerously-skip-permissions"
+      end
+    end
+
+    private def add_overrides
+      if mode = @overrides.permission_mode
+        @args << "--permission-mode" << mode
+      end
+
+      unless @overrides.disallowed_tools.empty?
+        @args << "--disallowed-tools"
+        @args.concat(@overrides.disallowed_tools)
       end
     end
 
