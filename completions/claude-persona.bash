@@ -19,7 +19,7 @@ _claude_persona() {
     local commands="list generate show rename remove update mcp help version"
     local mcp_commands="available list import import-all show remove"
     local update_commands="preview force help"
-    local global_opts="--vibe --dangerously-skip-permissions --dry-run --print --resume --session-id --output-format --permission-mode --disallowed-tools --settings --help --version -p -r -h -v"
+    local global_opts="--vibe --dangerously-skip-permissions --dry-run --print --resume --session-id --output-format --permission-mode --disallowed-tools --settings --json --help --version -p -r -h -v"
 
     # Get persona names dynamically
     _claude_persona_personas() {

@@ -21,6 +21,7 @@ module ClaudePersona
       permission_mode : String? = nil
       disallowed_tools = [] of String
       host_settings : String? = nil
+      json_output = false
       show_help_flag = false
       show_version_flag = false
 
@@ -43,6 +44,7 @@ module ClaudePersona
           disallowed_tools.concat(tools.split(',').map(&.strip).reject(&.empty?))
         end
         p.on("--settings=JSON", "Settings JSON object merged into the launch settings") { |json| host_settings = json }
+        p.on("--json", "Machine-readable output (show)") { json_output = true }
         p.on("-h", "--help", "Show this help") { show_help_flag = true }
         p.on("-v", "--version", "Show version") { show_version_flag = true }
 
@@ -86,7 +88,7 @@ module ClaudePersona
         when "generate"
           generate_persona(dryrun)
         when "show"
-          show_persona(rest.first?)
+          show_persona(rest.first?, json_output)
         when "rename"
           rename_persona(rest[0]?, rest[1]?)
         when "remove"
@@ -137,6 +139,7 @@ module ClaudePersona
         list                    List available personas
         generate                Create new persona interactively
         show <persona>          Display persona configuration
+        show <persona> --json   The same, as JSON for host programs
         rename <old> <new>      Rename a persona
         remove <persona>        Delete a persona
         update                  Update to latest version
@@ -435,7 +438,7 @@ module ClaudePersona
       lines.join("\n")
     end
 
-    private def self.show_persona(name : String?)
+    private def self.show_persona(name : String?, json_output : Bool = false)
       unless name
         STDERR.puts "Usage: claude-persona show <persona>"
         STDERR.puts ""
@@ -451,7 +454,11 @@ module ClaudePersona
         exit(1)
       end
 
-      puts File.read(path)
+      if json_output
+        puts PersonaReport.json(name, PersonaConfig.load(name))
+      else
+        puts File.read(path)
+      end
     end
 
     private def self.rename_persona(old_name : String?, new_name : String?)

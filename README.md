@@ -83,6 +83,7 @@ claude-persona <name> -p "prompt"  # One-shot: print response and exit
 claude-persona <name> --dry-run    # Show command without executing
 claude-persona list                # List all available personas
 claude-persona show <name>         # Display persona configuration
+claude-persona show <name> --json  # The same, as JSON (initial_message is null when there is none)
 claude-persona generate            # Create new persona interactively
 claude-persona rename <old> <new>  # Rename a persona
 claude-persona remove <name>       # Delete a persona (prompts for confirmation)
