@@ -78,6 +78,7 @@ make install PREFIX=/usr/local
 ```bash
 claude-persona <name>              # Launch Claude with this persona
 claude-persona <name> --vibe       # Launch with permissions skipped
+claude-persona <name> --disallowed-tools T  # Deny tools on top of the persona (see Launch Overrides)
 claude-persona <name> -p "prompt"  # One-shot: print response and exit
 claude-persona <name> --dry-run    # Show command without executing
 claude-persona list                # List all available personas
@@ -310,6 +311,29 @@ claude-persona rails-dev --vibe
 This passes `--dangerously-skip-permissions` to Claude. Use when you want Claude to work autonomously without approval prompts. The longer `--dangerously-skip-permissions` flag also works as an alias.
 
 Note: This is a runtime flag, not a persona config option. The same persona can be launched with or without vibe mode depending on context.
+
+## Launch Overrides
+
+A program that launches personas (a session manager, say) can add settings on
+top of a persona without editing it:
+
+```bash
+claude-persona rails-dev \
+  --permission-mode dontAsk \
+  --disallowed-tools AskUserQuestion,EnterPlanMode \
+  --settings '{"hooks":{"PermissionRequest":[...]}}'
+```
+
+- `--permission-mode MODE` is passed after the persona's own `[permissions]`
+  mode, and Claude uses the last one, so it wins.
+- `--disallowed-tools TOOLS` adds to the persona's `[tools] disallowed` list.
+  Repeat it or separate tools with commas.
+- `--settings JSON` must be a JSON object. It is merged into the settings
+  claude-persona passes inline, so its hooks and env apply, while the session
+  ID env var stays the one this launch uses. In print mode it is passed alone.
+
+The settings are visible in `ps`, like the rest of the command line, so never
+put a secret in them.
 
 ## Initial Message (Auto-Start)
 

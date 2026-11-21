@@ -19,7 +19,7 @@ _claude_persona() {
     local commands="list generate show rename remove update mcp help version"
     local mcp_commands="available list import import-all show remove"
     local update_commands="preview force help"
-    local global_opts="--vibe --dangerously-skip-permissions --dry-run --print --resume --output-format --help --version -p -r -h -v"
+    local global_opts="--vibe --dangerously-skip-permissions --dry-run --print --resume --session-id --output-format --permission-mode --disallowed-tools --settings --help --version -p -r -h -v"
 
     # Get persona names dynamically
     _claude_persona_personas() {
@@ -77,6 +77,12 @@ _claude_persona() {
                 --output-format)
                     # Output format options
                     COMPREPLY=($(compgen -W "text json stream-json" -- "${cur}"))
+                    ;;
+                --permission-mode)
+                    COMPREPLY=($(compgen -W "acceptEdits auto bypassPermissions default dontAsk manual plan" -- "${cur}"))
+                    ;;
+                --session-id|--disallowed-tools|--settings)
+                    COMPREPLY=()
                     ;;
                 list|generate|help|version)
                     # These don't take arguments, offer flags
