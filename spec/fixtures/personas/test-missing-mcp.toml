@@ -1,6 +1,6 @@
 description = "References MCP that does not exist"
 model = "haiku"
-version = "1.5.0"
+version = "1.6.0"
 
 [mcp]
 configs = ["nonexistent-mcp"]
