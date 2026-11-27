@@ -87,6 +87,26 @@ detect_platform() {
   echo "${os}-${arch}"
 }
 
+# The asset suffix a release publishes for this platform. From 1.6.1 a release
+# holds one universal macOS binary (-darwin); earlier releases named the
+# architecture (-darwin-arm64, -darwin-amd64), so those are tried second.
+pick_asset() {
+  local version="$1" platform="$2" suffix candidates
+
+  case "$platform" in
+    darwin-*) candidates="darwin ${platform}" ;;
+    *) candidates="${platform}" ;;
+  esac
+
+  for suffix in $candidates; do
+    if curl -fsIL -o /dev/null "${GITHUB_RELEASES}/v${version}/${BINARY_NAME}-${version}-${suffix}.tar.gz" 2>/dev/null; then
+      echo "$suffix"
+      return 0
+    fi
+  done
+  return 1
+}
+
 # Check write permissions
 check_permissions() {
   local path="$1"
@@ -154,9 +174,16 @@ main() {
     exit 0
   fi
 
+  # Find the asset this release publishes for this platform
+  local asset_suffix
+  if ! asset_suffix=$(pick_asset "$latest_version" "$platform"); then
+    echo -e "${RED}v${latest_version} has no build for ${platform}${NC}" >&2
+    exit 1
+  fi
+
   # Build artifact names
-  local tarball_name="claude-persona-${latest_version}-${platform}.tar.gz"
-  local checksum_name="claude-persona-${latest_version}-${platform}.tar.gz.sha256"
+  local tarball_name="claude-persona-${latest_version}-${asset_suffix}.tar.gz"
+  local checksum_name="claude-persona-${latest_version}-${asset_suffix}.tar.gz.sha256"
   local download_url="${GITHUB_RELEASES}/v${latest_version}/${tarball_name}"
   local checksum_url="${GITHUB_RELEASES}/v${latest_version}/${checksum_name}"
   local script_url="https://raw.githubusercontent.com/${REPO}/main/scripts/update.sh"
@@ -296,8 +323,8 @@ main() {
   fi
 
   # Find the binary in extracted contents
-  # Binary is named claude-persona-{version}-{platform} in the tarball
-  local new_binary="${TMP_DIR}/${BINARY_NAME}-${latest_version}-${platform}"
+  # Binary is named claude-persona-{version}-{asset suffix} in the tarball
+  local new_binary="${TMP_DIR}/${BINARY_NAME}-${latest_version}-${asset_suffix}"
   if [[ ! -f "$new_binary" ]]; then
     # Fallback: try just the binary name
     new_binary="${TMP_DIR}/${BINARY_NAME}"

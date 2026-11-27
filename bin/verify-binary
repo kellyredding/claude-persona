@@ -1,0 +1,37 @@
+#!/bin/bash
+set -euo pipefail
+
+# Refuses a release binary that would fail on some Mac a release claims:
+# missing either architecture, built for a macOS newer than the floor, or
+# linking a library outside the system.
+# Usage: bin/verify-binary PATH
+
+TARGET_MACOS="15.0"
+
+binary="${1:?usage: bin/verify-binary PATH}"
+[ -f "$binary" ] || { echo "Error: no binary at $binary" >&2; exit 1; }
+
+for arch in arm64 x86_64; do
+  # One architecture per call: with the file first, lipo reads a second
+  # architecture as another input file and fails.
+  if ! lipo "$binary" -verify_arch "$arch" 2>/dev/null; then
+    echo "Error: $binary has no $arch code; a release is universal (arm64 and x86_64)" >&2
+    exit 1
+  fi
+  load_commands=$(otool -arch "$arch" -l "$binary")
+  minos=$(printf '%s\n' "$load_commands" | awk '/LC_BUILD_VERSION/ {found=1} found && $1 == "minos" {print $2; exit}')
+  if [ "$minos" != "$TARGET_MACOS" ]; then
+    echo "Error: $binary ($arch) is built for macOS ${minos:-unknown}, not $TARGET_MACOS" >&2
+    exit 1
+  fi
+done
+
+libs=$(otool -arch all -L "$binary")
+outside=$(printf '%s\n' "$libs" | awk '/^\t/ {print $1}' | { grep -v '^/usr/lib/' || true; })
+if [ -n "$outside" ]; then
+  echo "Error: $binary links libraries outside /usr/lib:" >&2
+  printf '%s\n' "$outside" >&2
+  exit 1
+fi
+
+echo "    verified: arm64 and x86_64, macOS $TARGET_MACOS and later, system libraries only"

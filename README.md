@@ -22,20 +22,20 @@ Download the latest binary from [Releases](https://github.com/kellyredding/claud
 
 ```bash
 # Download tarball and checksum (check Releases page for latest version)
-# Use darwin-arm64 for Apple Silicon, darwin-amd64 for Intel
-curl -LO https://github.com/kellyredding/claude-persona/releases/download/vX.X.X/claude-persona-X.X.X-darwin-arm64.tar.gz
-curl -LO https://github.com/kellyredding/claude-persona/releases/download/vX.X.X/claude-persona-X.X.X-darwin-arm64.tar.gz.sha256
+# One universal binary: macOS 15 or later, Apple Silicon or Intel
+curl -LO https://github.com/kellyredding/claude-persona/releases/download/vX.X.X/claude-persona-X.X.X-darwin.tar.gz
+curl -LO https://github.com/kellyredding/claude-persona/releases/download/vX.X.X/claude-persona-X.X.X-darwin.tar.gz.sha256
 
 # Verify checksum (should say "OK")
-shasum -a 256 -c claude-persona-X.X.X-darwin-arm64.tar.gz.sha256
+shasum -a 256 -c claude-persona-X.X.X-darwin.tar.gz.sha256
 
 # Extract and install
-tar -xzf claude-persona-X.X.X-darwin-arm64.tar.gz
-mv claude-persona-X.X.X-darwin-arm64 ~/.local/bin/claude-persona
+tar -xzf claude-persona-X.X.X-darwin.tar.gz
+mv claude-persona-X.X.X-darwin ~/.local/bin/claude-persona
 chmod +x ~/.local/bin/claude-persona
 
 # Clean up
-rm claude-persona-X.X.X-darwin-arm64.tar.gz claude-persona-X.X.X-darwin-arm64.tar.gz.sha256
+rm claude-persona-X.X.X-darwin.tar.gz claude-persona-X.X.X-darwin.tar.gz.sha256
 ```
 
 Or build from source (requires Crystal):

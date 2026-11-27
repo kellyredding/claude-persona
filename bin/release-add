@@ -1,7 +1,8 @@
 #!/bin/bash
 set -e
 
-# Builds on current platform and adds to existing release
+# Builds on current platform and adds to existing release (Linux only: every
+# Mac is covered by the universal binary bin/release publishes)
 # Usage: bin/release-add
 
 VERSION_FILE="VERSION.txt"
@@ -18,6 +19,12 @@ if [ "$CURRENT_BRANCH" != "main" ]; then
   echo "Switch to main first:"
   echo "  git checkout main"
   echo "  git pull origin main"
+  exit 1
+fi
+
+if [ "$(uname -s)" = "Darwin" ]; then
+  echo "Error: bin/release already publishes a universal binary for Apple Silicon and Intel Macs."
+  echo "bin/release-add is for adding a Linux build."
   exit 1
 fi
 

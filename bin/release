@@ -40,8 +40,17 @@ if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
   exit 1
 fi
 
+# The build compiles Apple Silicon natively and cross-compiles Intel, so it
+# runs on an Apple Silicon Mac.
+if [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; then
+  echo "Error: releases are built on an Apple Silicon Mac; this is $(uname -s) on $(uname -m)."
+  exit 1
+fi
+
 TAG="v$VERSION"
-ARTIFACT="$BINARY-$VERSION-darwin-arm64"
+# One universal binary for every Mac. Releases up to 1.6.0 named the
+# architecture (darwin-arm64, darwin-amd64); scripts/update.sh still finds those.
+ARTIFACT="$BINARY-$VERSION-darwin"
 
 echo "==> Releasing $TAG (from $VERSION_FILE)"
 
@@ -65,14 +74,17 @@ for f in spec/fixtures/personas/*.toml; do
 done
 
 # Build release binary
-echo "==> Building release binary"
-mkdir -p "$BUILD_DIR"
-shards install
-crystal build --release --no-debug -o "$BUILD_DIR/$BINARY" src/claude_persona.cr
+echo "==> Building the universal release binary"
+make build
 
 # Run specs
 echo "==> Running specs"
 crystal spec
+
+# Before anything is committed or tagged: a binary missing an architecture or
+# built for a newer macOS would fail only on the Mac it was meant for.
+echo "==> Verifying the release binary"
+bin/verify-binary "$BUILD_DIR/$BINARY"
 
 # Create releases directory
 mkdir -p "$RELEASE_DIR"
