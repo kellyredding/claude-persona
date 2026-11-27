@@ -15,41 +15,68 @@ This document describes how to create releases and distribute binaries.
 Make the release scripts executable:
 
 ```bash
-chmod +x bin/release bin/release-add bin/verify-binary
+chmod +x bin/bump bin/release bin/release-add bin/verify-binary
 ```
+
+## Branches
+
+Work lands on `development`; feature branches come off it and `development`
+fast-forwards to them. `main` is the release branch and only ever
+fast-forwards to `development`: nothing is committed on it, not even a version
+bump. `main` stays the default branch, because every install fetches
+`scripts/update.sh` from it, so a change to that script reaches installs when
+`main` moves, at release.
 
 ## Creating a New Release
 
-### 1. Update the Version
-
-Edit `VERSION.txt` with the new version number:
+### 1. Bump the Version on `development`
 
 ```bash
-echo "0.2.0" > VERSION.txt
+git checkout development && git pull --ff-only
+bin/bump X.Y.Z          # VERSION.txt, shard.yml and the persona fixtures
+# write release-notes/vX.Y.Z.md (release-notes/README.md has the format)
+git add VERSION.txt shard.yml spec/fixtures/personas release-notes/vX.Y.Z.md
+git commit -m "chore(release): bump to X.Y.Z with its notes"
+git push origin development
 ```
 
 Version must be in `X.Y.Z` format (semver).
 
-### 2. Run the Release Script
+### 2. Fast-Forward `main`
+
+```bash
+git checkout main && git pull --ff-only
+git merge --ff-only development
+git push origin main
+```
+
+If the fast-forward refuses, `main` has a commit `development` lacks: stop and
+find out why rather than merging.
+
+### 3. Run the Release Script
 
 From `main`, on an Apple Silicon Mac:
 
 ```bash
+bin/release --dry-run   # everything up to the tag; prints the release description
 bin/release
+git checkout development
 ```
 
-This will:
-- Sync version to `shard.yml` and test fixtures
-- Build one universal binary (`make build`): Apple Silicon and Intel, for
+It refuses, before building anything, unless it is on `main` at `origin/main`
+with a clean tree, `shard.yml` and the fixtures match `VERSION.txt`, the notes
+exist, and the tag is new or already on this commit. Then it:
+- Runs `make check`, and refuses if that changed the tree (it formats)
+- Builds one universal binary (`make build`): Apple Silicon and Intel, for
   macOS 15 and later
-- Run test suite
-- Verify the binary (`bin/verify-binary`): both architectures present, each
-  built for macOS 15.0, linking only system libraries. It stops here, before
-  anything is committed or tagged, if any check fails
-- Create tarball with SHA256 checksum
-- Commit version bump
-- Create and push git tag
-- Create GitHub release with the universal macOS binary
+- Verifies it (`bin/verify-binary`): both architectures present, each built
+  for macOS 15.0, linking only system libraries, and reporting the version
+- Creates the tarball with its SHA256 checksum
+- Tags the commit and pushes the tag; it commits nothing
+- Creates the GitHub release with the universal macOS binary and the notes
+
+Run it again after a failure: it finishes the tag, its push or the GitHub
+release that an earlier run left undone.
 
 ### 3. Add a Linux Build (Optional)
 
@@ -106,9 +133,9 @@ Releases up to 1.6.0 named the macOS architecture instead
 Every installed version runs `scripts/update.sh` fresh from `main`, so the
 script, not the installed binary, decides which asset to download. On a Mac it
 tries the universal `-darwin` asset first, then `-darwin-<arch>` for releases
-that predate it. A change to that script reaches every install the moment it
-is pushed, so test it before pushing: point a copy at a sandboxed `HOME` and a
-`PATH` holding a copy of the binary.
+that predate it. A change to that script reaches every install as soon as it
+is on `main`, so test it before `main` moves: run a copy with a sandboxed
+`HOME` and a `PATH` holding a copy of the binary.
 
 ## Verifying Downloads
 
@@ -136,9 +163,15 @@ claude-persona version
 
 ## Troubleshooting
 
-### "Tag already exists"
+### "already exists on another commit"
 
-The version in `VERSION.txt` has already been released. Increment the version number.
+The version in `VERSION.txt` has already been released. Bump it on
+`development` with `bin/bump`.
+
+### "shard.yml says … VERSION.txt says …"
+
+The version was changed by hand. Run `bin/bump X.Y.Z` on `development`, which
+sets all three locations, and commit the result.
 
 ### "releases are built on an Apple Silicon Mac"
 
@@ -165,8 +198,8 @@ apt-get install crystal libssl-dev libxml2-dev libyaml-dev libgmp-dev
 
 ## Version Locations
 
-`VERSION.txt` is the source of truth. Two further locations are synced from it
-by `bin/release`:
+`VERSION.txt` is the source of truth. Two further locations are set with it by
+`bin/bump`, and `bin/release` refuses when they disagree:
 - `shard.yml` - Crystal package version
 - `spec/fixtures/personas/*.toml` - Test fixtures
 

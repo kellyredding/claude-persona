@@ -1,0 +1,27 @@
+#!/bin/bash
+set -euo pipefail
+
+# Sets the version everywhere it lives, for the version-bump commit on
+# development: VERSION.txt, shard.yml, and the persona fixtures, which must
+# match the binary or launching them in specs would rewrite them.
+# Usage: bin/bump X.Y.Z
+
+version="${1:?usage: bin/bump X.Y.Z}"
+version="${version#v}"
+if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+  echo "Error: '$version' is not a version like 1.2.3" >&2
+  exit 2
+fi
+
+cd "$(dirname "$0")/.."
+
+printf '%s\n' "$version" > VERSION.txt
+sed "s/^version: .*/version: $version/" shard.yml > shard.yml.tmp && mv shard.yml.tmp shard.yml
+for f in spec/fixtures/personas/*.toml; do
+  sed "s/^version = \".*\"/version = \"$version\"/" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+done
+
+echo "Set $version in VERSION.txt, shard.yml and spec/fixtures/personas."
+if [ ! -f "release-notes/v$version.md" ]; then
+  echo "Write release-notes/v$version.md (release-notes/README.md has the format) before committing."
+fi

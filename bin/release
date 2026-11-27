@@ -1,124 +1,143 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
-# Reads version from VERSION.txt, builds, tags, and creates GitHub release
-# Usage: bin/release
+# Releases what main already holds: checks, builds and verifies the universal
+# binary, then tags it and publishes the GitHub release. It commits nothing.
+# The version bump and its notes land on development first (bin/bump), and
+# main is fast-forwarded to development before this runs.
+#
+# Usage: bin/release [--dry-run]
+#
+#   --dry-run   Everything up to the tag, then print the release description.
+#
+# Run it again after a failure: it finishes the tag, its push or the GitHub
+# release that an earlier run left undone.
 
-VERSION_FILE="VERSION.txt"
 BINARY="claude-persona"
 BUILD_DIR="build"
 RELEASE_DIR="releases"
+REPO="kellyredding/claude-persona"
 
-# Verify we're on main branch
-CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$CURRENT_BRANCH" != "main" ]; then
-  echo "Error: Releases must be created from the 'main' branch."
-  echo "Currently on: $CURRENT_BRANCH"
-  echo ""
-  echo "Switch to main first:"
-  echo "  git checkout main"
-  echo "  git pull origin main"
-  exit 1
-fi
+dry_run=false
+case "${1:-}" in
+  "") ;;
+  --dry-run) dry_run=true ;;
+  *) echo "usage: bin/release [--dry-run]" >&2; exit 2 ;;
+esac
 
-# Read version from file
-if [ ! -f "$VERSION_FILE" ]; then
-  echo "Error: $VERSION_FILE not found"
-  exit 1
-fi
+die() { echo "Error: $*" >&2; exit 1; }
 
-VERSION=$(cat "$VERSION_FILE" | tr -d '[:space:]')
+cd "$(dirname "$0")/.."
 
-if [ -z "$VERSION" ]; then
-  echo "Error: $VERSION_FILE is empty"
-  exit 1
-fi
+# --- Preflight: everything that can refuse, before the slow part -------------
 
-# Validate version format
-if ! [[ "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-  echo "Error: Version '$VERSION' must be in format X.Y.Z"
-  exit 1
-fi
+# The build compiles Apple Silicon natively and cross-compiles Intel.
+[ "$(uname -s)" = "Darwin" ] && [ "$(uname -m)" = "arm64" ] \
+  || die "releases are built on an Apple Silicon Mac; this is $(uname -s) on $(uname -m)."
+command -v gh >/dev/null || die "the GitHub CLI (gh) is not installed."
 
-# The build compiles Apple Silicon natively and cross-compiles Intel, so it
-# runs on an Apple Silicon Mac.
-if [ "$(uname -s)" != "Darwin" ] || [ "$(uname -m)" != "arm64" ]; then
-  echo "Error: releases are built on an Apple Silicon Mac; this is $(uname -s) on $(uname -m)."
-  exit 1
-fi
+branch=$(git rev-parse --abbrev-ref HEAD)
+[ "$branch" = "main" ] \
+  || die "releases are made from main (currently on $branch). Fast-forward main to development, push it, then release."
+[ -z "$(git status --porcelain)" ] || die "the working tree has changes; a release is made from what main holds."
+git fetch --quiet origin main
+[ "$(git rev-parse HEAD)" = "$(git rev-parse origin/main)" ] \
+  || die "main is not origin/main. Push main (or pull it) first."
 
-TAG="v$VERSION"
-# One universal binary for every Mac. Releases up to 1.6.0 named the
-# architecture (darwin-arm64, darwin-amd64); scripts/update.sh still finds those.
-ARTIFACT="$BINARY-$VERSION-darwin"
-
-echo "==> Releasing $TAG (from $VERSION_FILE)"
-
-# Check if tag already exists
-if git rev-parse "$TAG" >/dev/null 2>&1; then
-  echo "Error: Tag $TAG already exists. Update $VERSION_FILE first."
-  exit 1
-fi
-
-# Sync version to shard.yml (portable sed - works on macOS and Linux)
-echo "==> Syncing version to shard.yml"
-sed "s/^version: .*/version: $VERSION/" shard.yml > shard.yml.tmp && mv shard.yml.tmp shard.yml
-
-# The binary needs no sync step: src/claude_persona.cr reads VERSION.txt at
-# compile time, so building below is what picks the new version up.
-
-# Sync version to test fixtures
-echo "==> Syncing version to test fixtures"
+version=$(tr -d '[:space:]' < VERSION.txt)
+[[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || die "VERSION.txt holds '$version', not a version like 1.2.3."
+shard_version=$(sed -n 's/^version: //p' shard.yml)
+[ "$shard_version" = "$version" ] \
+  || die "shard.yml says $shard_version, VERSION.txt says $version. Run bin/bump $version on development."
 for f in spec/fixtures/personas/*.toml; do
-  sed "s/^version = \".*\"/version = \"$VERSION\"/" "$f" > "$f.tmp" && mv "$f.tmp" "$f"
+  fixture_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$f")
+  [ "$fixture_version" = "$version" ] \
+    || die "$f says $fixture_version, VERSION.txt says $version. Run bin/bump $version on development."
 done
 
-# Build release binary
-echo "==> Building the universal release binary"
-make build
+notes="release-notes/v$version.md"
+[ -s "$notes" ] || die "no release notes at $notes. Write them in the version-bump commit on development."
 
-# Run specs
-echo "==> Running specs"
-crystal spec
-
-# Before anything is committed or tagged: a binary missing an architecture or
-# built for a newer macOS would fail only on the Mac it was meant for.
-echo "==> Verifying the release binary"
-bin/verify-binary "$BUILD_DIR/$BINARY"
-
-# Create releases directory
-mkdir -p "$RELEASE_DIR"
-
-# Copy and compress
-echo "==> Creating release artifact"
-cp "$BUILD_DIR/$BINARY" "$RELEASE_DIR/$ARTIFACT"
-cd "$RELEASE_DIR"
-tar -czf "$ARTIFACT.tar.gz" "$ARTIFACT"
-shasum -a 256 "$ARTIFACT.tar.gz" > "$ARTIFACT.tar.gz.sha256"
-rm "$ARTIFACT"
-cd ..
-
-# Commit if there are changes
-if [ -n "$(git status --porcelain)" ]; then
-  echo "==> Committing version $VERSION"
-  git add VERSION.txt shard.yml spec/fixtures/personas/*.toml
-  git commit -m "Release $VERSION"
+tag="v$version"
+head=$(git rev-parse HEAD)
+if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+  [ "$(git rev-parse "$tag^{commit}")" = "$head" ] \
+    || die "$tag already exists on another commit. Bump the version on development."
 fi
 
-# Create and push tag
-echo "==> Creating tag $TAG"
-git tag -a "$TAG" -m "Release $VERSION"
-git push origin main
-git push origin "$TAG"
+# One universal binary for every Mac. Releases up to 1.6.0 named the
+# architecture (darwin-arm64, darwin-amd64); scripts/update.sh still finds those.
+artifact="$BINARY-$version-darwin"
 
-# Create GitHub release with artifact
-echo "==> Creating GitHub release"
-gh release create "$TAG" \
-  --title "v$VERSION" \
-  --generate-notes \
-  "$RELEASE_DIR/$ARTIFACT.tar.gz" \
-  "$RELEASE_DIR/$ARTIFACT.tar.gz.sha256"
+echo "==> Releasing claude-persona $version ($(git rev-parse --short=12 HEAD))"
+
+# --- Check, build, verify ----------------------------------------------------
+
+echo "==> Running every check (make check)"
+make check >/dev/null 2>&1 || die "make check failed; run it to see why."
+# make check formats the source, so a change here means main was not formatted.
+[ -z "$(git status --porcelain)" ] || die "make check changed the tree (it formats the source). Commit the formatting on development."
+
+echo "==> Building the universal release binary"
+make build >/dev/null 2>&1 || die "make build failed; run it to see why."
+
+# Before anything is tagged: a binary missing an architecture or built for a
+# newer macOS would fail only on the Mac it was meant for.
+echo "==> Verifying the release binary"
+bin/verify-binary "$BUILD_DIR/$BINARY"
+have=$("$BUILD_DIR/$BINARY" version)
+[ "$have" = "$version" ] || die "the binary reports $have, not $version."
+
+echo "==> Packaging"
+mkdir -p "$RELEASE_DIR"
+rm -f "$RELEASE_DIR/$artifact" "$RELEASE_DIR/$artifact.tar.gz" "$RELEASE_DIR/$artifact.tar.gz.sha256"
+cp "$BUILD_DIR/$BINARY" "$RELEASE_DIR/$artifact"
+(cd "$RELEASE_DIR" && tar -czf "$artifact.tar.gz" "$artifact" \
+  && shasum -a 256 "$artifact.tar.gz" > "$artifact.tar.gz.sha256" \
+  && rm "$artifact")
+
+description="$RELEASE_DIR/$artifact.notes.md"
+{
+  echo "Update an existing install with \`claude-persona update\`."
+  echo
+  echo "One universal binary for macOS 15 or later, on Apple Silicon or Intel."
+  echo "To install by hand, see the README."
+  echo
+  echo "## What's new"
+  echo
+  cat "$notes"
+} > "$description"
+
+if $dry_run; then
+  echo "==> Dry run: stopping before the tag. Archive: $RELEASE_DIR/$artifact.tar.gz"
+  echo "==> The release description would be:"
+  echo
+  cat "$description"
+  exit 0
+fi
+
+# --- Tag and publish ---------------------------------------------------------
+
+if git rev-parse -q --verify "refs/tags/$tag" >/dev/null; then
+  echo "==> $tag already points at this commit"
+else
+  echo "==> Tagging $tag"
+  git tag -a "$tag" -m "Release $version"
+fi
+echo "==> Pushing $tag"
+git push --quiet origin "$tag"
+
+if gh release view "$tag" --repo "$REPO" >/dev/null 2>&1; then
+  echo "==> Finishing the existing GitHub release"
+  gh release upload "$tag" --repo "$REPO" --clobber \
+    "$RELEASE_DIR/$artifact.tar.gz" "$RELEASE_DIR/$artifact.tar.gz.sha256"
+  gh release edit "$tag" --repo "$REPO" --title "v$version" --notes-file "$description" --draft=false --latest >/dev/null
+else
+  echo "==> Publishing the GitHub release"
+  gh release create "$tag" --repo "$REPO" --title "v$version" --notes-file "$description" --latest \
+    "$RELEASE_DIR/$artifact.tar.gz" "$RELEASE_DIR/$artifact.tar.gz.sha256"
+fi
 
 echo ""
-echo "==> Released $TAG"
-echo "    https://github.com/kellyredding/claude-persona/releases/tag/$TAG"
+echo "==> Released $tag"
+echo "    https://github.com/$REPO/releases/tag/$tag"
