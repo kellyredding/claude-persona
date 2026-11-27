@@ -49,9 +49,10 @@ version=$(tr -d '[:space:]' < VERSION.txt)
 shard_version=$(sed -n 's/^version: //p' shard.yml)
 [ "$shard_version" = "$version" ] \
   || die "shard.yml says $shard_version, VERSION.txt says $version. Run bin/bump $version on development."
+# A fixture with no version line (the invalid-TOML one) has nothing to match.
 for f in spec/fixtures/personas/*.toml; do
   fixture_version=$(sed -n 's/^version = "\(.*\)"$/\1/p' "$f")
-  [ "$fixture_version" = "$version" ] \
+  [ -z "$fixture_version" ] || [ "$fixture_version" = "$version" ] \
     || die "$f says $fixture_version, VERSION.txt says $version. Run bin/bump $version on development."
 done
 
